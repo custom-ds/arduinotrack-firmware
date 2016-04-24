@@ -21,6 +21,8 @@ You should have received a copy of the GNU General Public License along with Ard
 #include <string.h>
 
 #define _MAX_SENTENCE_LEN 88
+#define _MAX_LATITUDE_LEN 12
+#define _MAX_LONGITUDE_LEN 13
 #define _METERS_TO_FEET 3.2808399
 
 
@@ -36,22 +38,10 @@ class GPS
     GPS(void);
     void clearInputBuffer(void);
     void addChar(char c);
-    void debugGGA();
-    void debugRMC();
-    void DebugData();
-    void GPGGA(char * szReturn);
-    void GPRMC(char * szReturn);
-    
-    
-    
-    inline void getLatitude(char *sz) {
-    	if (_bGGAComplete || _bRMCComplete) strcpy(sz, _szLatitude);
-    	else sz[0] = '\0';
-    }
-    inline void getLongitude(char *sz) {
-    	if (_bGGAComplete || _bRMCComplete) strcpy(sz, _szLongitude);
-    	else sz[0] = '\0';
-		}
+    void getLatitude(char *sz);
+    void getLongitude(char *sz);
+
+   
     inline void getGPSTime(int *Hour, int *Minute, int *Second)
     {
     	if (_bGGAComplete || _bRMCComplete) {
@@ -148,9 +138,9 @@ class GPS
 	  
 		// properties
 		char _szTemp[_MAX_SENTENCE_LEN];
-		char _szLatitude[10];
+		char _szLatitude[_MAX_LATITUDE_LEN];
 		char _cLatitudeHemi;
-		char _szLongitude[11];
+		char _szLongitude[_MAX_LONGITUDE_LEN];
 		char _cLongitudeHemi;
 		int _iFixQuality;
 		bool _bFixValid;

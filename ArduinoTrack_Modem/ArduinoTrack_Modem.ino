@@ -1,6 +1,6 @@
 /*
 ArduinoTrack_Modem
-Copywrite 2011-2015 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+Copywrite 2011-2016 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
@@ -11,10 +11,11 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 
 You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
+Version 3.0.0 - April 23, 2016 - No major changes to firmware, only fixing depreciated data type, and moving the install install instructions into readme.txt.  Bringing to version 3.0 for consistency with ArduinoTrack firmware.
 Version 2.1.3 - May 23, 2015 - Adjusted the firmware programming instructions.
 Version 2.1.0 - May 3, 2015 - Minor changes to code to bring compliance with PCB version 1.10.
 Version 2.0.3 - March 29, 2015 - Simple change to instructions only to accomidate Arduino IDE 1.6.2.  Also changed high fuse to keep eeprom values from being reset during firmware flash.
@@ -25,84 +26,11 @@ Version 2.0.0 - January 15, 2015 - Integrated the common TNC library into the mo
 Version 1.9.0 - January 8, 2015 - Moved the arySineHigh and arySineLow into Flash ROM to conserve SRAM.
 
 
-Programming Instructions:
-ArduinoTrack_Modem is designed for use with the Arduino 1.5.8+ development environment.  It is intended to be used as an Arduino "shield"
-to serve as a transmit-only modem for AX.25 APRS packets.
-
-Step 1:
-Be sure you have the Ardunion 1.5.8+ development environment installed.  These instructions are specifically for the 1.5+ version of Arduino.
-
-Step 2:
-With the Arduino software CLOSED, open the "C:\Program Files (x86)\Arduino\hardware\arduino\avr\boards.txt" in a text editor.
-
-Step 3:
-Add the following lines to the boards.txt file, immediately after the menu.cpu=Processor line:
-  ##############################################################
-  trackshield.name=ArduinoTrack Shield
-  trackshield.upload.tool=arduinoasisp
-  trackshield.upload.protocol=stk500
-  trackshield.upload.maximum_size=32768
-  trackshield.upload.maximum_data_size=2048
-  trackshield.upload.speed=19200
-  trackshield.bootloader.tool=avrdude
-  trackshield.bootloader.low_fuses=0xFF
-  trackshield.bootloader.high_fuses=0xD6
-  trackshield.bootloader.extended_fuses=0x05
-  trackshield.bootloader.path=optiboot
-  trackshield.bootloader.file=optiboot/optiboot_atmega328.hex
-  trackshield.bootloader.unlock_bits=0x0F
-  trackshield.bootloader.lock_bits=0x0F
-  trackshield.build.mcu=atmega328p
-  trackshield.build.f_cpu=16000000L
-  trackshield.build.board=AVR_TRACKSHIELD
-  trackshield.build.core=arduino
-  trackshield.build.variant=standard
-  ##############################################################
-
-Save the boards.txt file when finished.  Note, you may need to run this text editor as an 'Administrator' of your PC as it needs
-the rights to change files within the Program Files directory.
-
-Step 4:
-Launch the Arduino software.
-
-Step 5:
-On a separate Arduino Uno or similar, install the Arduino ISP Example Sketch the the Uno.
-
-Step 6:
-Plug the ArduinoTrack_Modem shield into Uno that is programmed as an ISP programmer.
-
-Step 7: (First time only)
-Open a command prompt on the PC.
-  C:\> cd \Program Files (x86)\Arduino\hardware\tools\avr\bin
-
-  * Replace "com24" with whatever Com port your ArduinoISP is enumerating on.
-  C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> avrdude.exe -p m328p  -b 19200 -c avrisp -C ..\etc\avrdude.conf -P com24 -U hfuse:w:0xD6:m -U lfuse:w:0xFF:m -U efuse:w:0x05:m
-
-  # This will write the fuses to the new processor.  This is only necessary to perform once after assembling a new board.  You can verify the settings with the following:
-  C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> avrdude.exe -p m328p  -b 19200 -c avrisp -C ..\etc\avrdude.conf -P com24 -U hfuse:r:highfuse:h -U lfuse:r:lowfuse:h -U efuse:r:exfuse:h
-  C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> cat highfuse
-  C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> cat lowfuse
-  C:\Program Files (x86)\Arduino\hardware\tools\avr\bin> cat exfuse
-
-Step 8:
-From the Tools-Board menu, select the ArduinoTrack Shield from the list of targets.  From the
-Tools-Port menu, select the appropriate COM port for the ISP programmer Arduino.
-
-Step 9:
-From the Tools-Programmer menu, select Arduino as ISP from the list.
-
-Step 10:
-To program the shield, go to File-Upload Using Programmer.  The Sketch will compile and will program to the ATMega328 processor similarly
-to how a normal Arduino with the bootloader is programmed.  However, in this situation, no bootloader is required on the shield.
-
-
-
-
 See www.projecttraveler.org for full construction and programming instructions.
 
 */
 
-#define FIRMWARE_VERSION "2.1.3"
+#define FIRMWARE_VERSION "3.0.0"
 
 
 
@@ -136,7 +64,7 @@ TNC oTNC;
 #define TONE_LOW_STEPS_PER_TICK 3273
 
 //Sinewave lookup tables for high and low tones (the difference is the amplitude)
-PROGMEM const prog_uchar _arySineHigh[] = {128, 131, 134, 137, 140, 144, 147, 150, 153, 156,
+PROGMEM const unsigned char _arySineHigh[] = {128, 131, 134, 137, 140, 144, 147, 150, 153, 156,
 	159, 162, 165, 168, 171, 174, 177, 179, 182, 185,
 	188, 191, 193, 196, 199, 201, 204, 206, 209, 211,
 	213, 216, 218, 220, 222, 224, 226, 228, 230, 232,
@@ -165,7 +93,7 @@ PROGMEM const prog_uchar _arySineHigh[] = {128, 131, 134, 137, 140, 144, 147, 15
 
 
 //Max 192 (3db down from High)
-PROGMEM const prog_uchar _arySineLow[] = {128, 129, 130, 132, 133, 134, 135, 136, 137, 139,
+PROGMEM const unsigned char _arySineLow[] = {128, 129, 130, 132, 133, 134, 135, 136, 137, 139,
 	140, 141, 142, 143, 144, 145, 146, 147, 149, 150,
 	151, 152, 153, 154, 155, 156, 157, 158, 158, 159,
 	160, 161, 162, 163, 164, 164, 165, 166, 167, 167,

@@ -34,7 +34,7 @@ You should have received a copy of the GNU General Public License along with Ard
 #define TIMER1_SEED 666
 #define TX_DELAY_LEN 50
 
-#define MAX_SZXMIT_SIZE 250
+#define MAX_SZXMIT_SIZE 200
 
 class TNC {
   public:

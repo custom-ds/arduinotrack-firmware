@@ -13,6 +13,8 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 You should have received a copy of the GNU General Public License along with ArduinoTrack.  If not, see <http://www.gnu.org/licenses/>.
 
 Version History:
+Version 1.0.4 - October 18, 2015 - Found bug where GPS latitude and longitude were exceeding the buffer.  Corrected and cleaned up some old code.
+Version 1.0.3 - October 7, 2015 - Eliminated excess Serial.print's.  Cleaned up old comments.
 Version 1.0.2 - April 27, 2015 - Added the possibility to capture GNGGA and GNRMC strings (instead of just GP***).
 Version 1.0.1 - February 27, 2015 - Added initialization to the private member variables.  Cleaned up some old comments.
 Version 1.0.0 - January 15, 2015 - Finalized the basic configuration and licensed GPS under the GPL3 license.
@@ -95,8 +97,7 @@ void GPS::addChar(char c) {
 			if (_szTemp[1] == 'G' && (_szTemp[2] == 'P' || _szTemp[2] == 'N') && _szTemp[3] == 'R' && _szTemp[4] == 'M' && _szTemp[5] == 'C') {
 				//we have the start of an RMC string
 
-Serial.println(F("Captured RMC:"));
-Serial.println(_szTemp);
+                                Serial.println(_szTemp);
 				_bRMCComplete = true;    //set a flag indicating that an RMC sentence has been received, therefore we have valid data
 
 				parseRMC();
@@ -107,8 +108,7 @@ Serial.println(_szTemp);
 			} else if (_szTemp[1] == 'G' && (_szTemp[2] == 'P' || _szTemp[2] == 'N') && _szTemp[3] == 'G' && _szTemp[4] == 'G' && _szTemp[5] == 'A') {
 				//we have the start of an GGA string
 
-Serial.println(F("Captured GGA:"));
-Serial.println(_szTemp);				
+                                Serial.println(_szTemp);				
 				_bGGAComplete = true;
 				parseGGA();
 				_bGotNewGGA = true;      //set a temporary flag indicating that we got a new RMC sentence
@@ -175,11 +175,11 @@ void GPS::parseRMC() {
 
 
 	//get the Latitude
-	getString(ptrTemp, _szLatitude, 10);
-        if (_szLatitude[0] == '\0') {
-          //the longitude was empty
+	getString(ptrTemp, _szLatitude, _MAX_LATITUDE_LEN);
+  if (_szLatitude[0] == '\0') {
+    //the longitude was empty
 	  strcpy(_szLatitude, "0000.0000");
-        }
+  }
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
@@ -193,11 +193,11 @@ void GPS::parseRMC() {
 
 
 	//get the Longitude
-	getString(ptrTemp, _szLongitude, 11);
-        if (_szLongitude[0] == '\0') {
-          //the longitude was empty
+	getString(ptrTemp, _szLongitude, _MAX_LONGITUDE_LEN);
+  if (_szLongitude[0] == '\0') {
+    //the longitude was empty
 	  strcpy(_szLongitude, "00000.0000");
-        }
+  }
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
@@ -255,19 +255,15 @@ void GPS::parseGGA() {
 	ptrTemp = skipToNext(ptrTemp);			//skip thru the rest of the chars in the time
 
 	//get the Latitude
-	getString(ptrTemp, _szLatitude, 10);
-        if (_szLatitude[0] == '\0') {
-          //the longitude was empty
-          strcpy(_szLatitude, "0000.0000");
-        }
-//Serial.println("Lat:");
-//Serial.println(_szLatitude);
+	getString(ptrTemp, _szLatitude, _MAX_LATITUDE_LEN);
+  if (_szLatitude[0] == '\0') {
+    //the longitude was empty
+    strcpy(_szLatitude, "0000.0000");
+  }
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
 	getString(ptrTemp, sz, 1);
-//Serial.println("LatH:");
-//Serial.println(sz);
 	if (sz[0] == 'S') {
 		_cLatitudeHemi = 'S';
 	} else {
@@ -277,19 +273,15 @@ void GPS::parseGGA() {
 
 
 	//get the Longitude
-	getString(ptrTemp, _szLongitude, 11);
-        if (_szLongitude[0] == '\0') {
-          //the longitude was empty
+	getString(ptrTemp, _szLongitude, _MAX_LONGITUDE_LEN);
+  if (_szLongitude[0] == '\0') {
+    //the longitude was empty
 	  strcpy(_szLongitude, "00000.0000");
-        }
-//Serial.println("Lon:");
-//Serial.println(_szLongitude);
+  }
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
 	getString(ptrTemp, sz, 1);
-//Serial.println("LonH:");
-//Serial.println(sz);
 	if (sz[0] == 'E') {
 		_cLongitudeHemi = 'E';
 	} else {
@@ -299,28 +291,18 @@ void GPS::parseGGA() {
 
 	//get position fix quality
 	getString(ptrTemp, sz, 2);
-//Serial.println("Fix:");
-//Serial.println(sz);
 	_iFixQuality = atoi(sz);
-//Serial.println(_iFixQuality);
 	ptrTemp = skipToNext(ptrTemp);
 	
 	//get number of sats received
 	getString(ptrTemp, sz, 3);
-//Serial.println("Sats:");
-//Serial.println(sz);
 	_iNumSats = atoi(sz);
-//Serial.println(_iNumSats);
 	ptrTemp = skipToNext(ptrTemp);
 	
 	ptrTemp = skipToNext(ptrTemp);		//skip over horizontal dilution
 	
 	getString(ptrTemp, sz, 8);
-//Serial.println("Alt:");
-//Serial.println(sz);
 	_fAltitude = atof(sz);
-//Serial.println(_fAltitude);
-
 }
 
 
@@ -330,7 +312,7 @@ void GPS::getString(char *ptrHaystack, char *ptrFound, int iMaxLength) {
 	*ptrFound = '\0';			//be sure that the Found is null terminated even if we didn't find anything
 	
 	int i = 0;
-	while (ptrHaystack[i] != '\0' && ptrHaystack[i] != ',' && i < iMaxLength) {
+	while (ptrHaystack[i] != '\0' && ptrHaystack[i] != ',' && i < (iMaxLength - 1)) {
 		
 		//this is just a char - copy it to the array
 		ptrFound[i] = ptrHaystack[i];
@@ -363,8 +345,6 @@ bool GPS::validateGPSSentence(char *szGPSSentence, int iNumCommas, int iMinLengt
 
 char* GPS::skipToNext(char *ptr) {
 	//takes a pointer, advances through until it either hits a null or gets past the next comma
-//Serial.print("Ptr Before: ");
-//Serial.println(ptr);
 	//ptr++;		//we always have to advance at least once
 	while (*ptr != ',' && *ptr != '\0') {
 		//just a char - incr to the next one
@@ -372,10 +352,32 @@ char* GPS::skipToNext(char *ptr) {
 	}
 	
 	if (*ptr == ',') ptr++;			//if we landed on a comma, advance one
-//Serial.print("Ptr After: ");
-//Serial.println(ptr);		
 	return ptr;
 }
 
+void GPS::getLatitude(char *sz) {
+  byte i = 0;
+  sz[0] = 0x00;   //always make sure we return null if no valid data in the source
 
+  if (_bGGAComplete || _bRMCComplete) {
+    while(_szLatitude[i] > 0x00 && i < _MAX_LATITUDE_LEN) {
+      sz[i] = _szLatitude[i];
+      i++;
+      sz[i] = 0x00;   //always null terminate the end
+    }
+  }
+}
+
+void GPS::getLongitude(char *sz) {
+  byte i = 0;
+  sz[0] = 0x00;   //always make sure we return null if no valid data in the source
+
+  if (_bGGAComplete || _bRMCComplete) {
+    while(_szLongitude[i] > 0x00 && i < _MAX_LONGITUDE_LEN) {
+      sz[i] = _szLongitude[i];
+      i++;
+      sz[i] = 0x00;   //always null terminate the end
+    }
+  }
+}
 

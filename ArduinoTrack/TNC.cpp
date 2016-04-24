@@ -13,6 +13,7 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 You should have received a copy of the GNU General Public License along with ArduinoTrack.  If not, see <http://www.gnu.org/licenses/>.
 
 Version History:
+Version 1.0.2 - October 7, 2015 - Reduced the maximum transmit size from 250 to 200 bytes to conserve RAM.
 Version 1.0.1 - February 14, 2015 - Fixed issue with errant null being transmitted, audio was moved from A1 to D3, in order to correctly utilize native PWM.
 Version 1.0.0 - January 15, 2015 - Finalized the basic configuration and licensed GPS under the GPL3 license.
 

@@ -1,3 +1,8 @@
+#
+#
+# Copy this file into C:\Program Files (x86)\Arduino\Hardware\Arduino\avr\ and then restart the Arduino IDE to configure it for use with the ArduinoTrack Shield.
+#
+#
 ##############################################################
 trackshield.name=ArduinoTrack Shield
 trackshield.upload.tool=arduinoasisp

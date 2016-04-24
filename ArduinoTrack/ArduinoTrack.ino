@@ -1,7 +1,7 @@
 
 /*
 ArduinoTrack
-Copywrite 2011-2015 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+Copywrite 2011-2016 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
@@ -12,44 +12,26 @@ MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public
 
 You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-
+ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
-
-Version 2.1.7 - August 13, 2015 - Added support for TMP102 outside air temp.  Also added piezo speaker to exercise routines.
-Version 2.1.5 - June 9, 2015 - Added exercising routine to test new boards.
-Version 2.1.4 - June 6, 2015 - Fixed a small logic error, and eliminated some serial debugging no longer needed.  Added a manual configuration option to reset configs to defaults.
-Version 2.1.3 - May 23, 2015 - Fix issue with Ublox fix quality showing up as 'na'.  Initializing greeting now displays firmware version.  Adjusted the firmware programming instructions.
-Version 2.1.0 - May 3, 2015 - Several changes to accomidate the version 1.10 of the PCB, including support for Ublox GPS's, switching from 1-wire to SPI for temp/baro pressure, and enabling more IO pins to be available for addons.
-Version 2.0.2 - February 27, 2015 - Added a configuration annunciation, altered the GPS constructor.  Altered the HighBit to prevent the erasure of eeprom data after firmware updates. Uploaded firmware to GitHub.
-Version 2.0.1 - February 14, 2015 - Updated tnc.cpp to include additional debugging and fixed an issue with PWM audio on PIN_AUDIO_OUT.  Numerous small changes to sync codebase between ArduinoTrack and _Combined.
-Version 2.0.0 - January 15, 2015 - Integrated the common TNC library into the Combined Sketch.  Licensed ArduinoTrack_Combined under the GPL3 license.
-Version 1.2.0 - January 8, 2015 - Numerous changes to the TNC interfacing code to make the stand-alone ArduinoTrack codebase consistent with the Combined code.  Eliminated alternate TNC types (besides KISS).
-Version 1.1.0 - November 8, 2014 - Modifications to run with ArduinoTrack Shield version 1.0.0.  Adjusted timing delays on annunciator to sound more natural.
-Version 1.0.2 - September 12, 2014 - Fixed issue with altitude based tracking transmitting continuously.  Fixed negative temperatures being transmitted incorrectly.
-
-Version 1.0.1 - July 1, 2014 -
-Version 1.0.0 - June 7, 2014 - Finalized the configuration for GPSL 2014.
-Version 0.9.5 - March 9, 2014 - Introduced the PC-based "Configurator" tool.  Saves all configs to EEPROM.
-Version .900 - July 16, 2011 - Ready for GPSL Traveler Flight 2011b
-Version .901 - August 27, 2011 - Added mycall and Path statements to the KPC3 Init TNC, split the SSID's out into separate Chars,
-Version .950 - May 31, 2012
-      * Numerous fixes to get Arudino Track to compile in the v1.0 IDE
-      * Switched to stock SoftwareSerial.h library instead of stand-alone
-      * Changed time slots for PT-2012a (GPSL) flight.
-Version .951 - Oct 18, 2012
-      * Updated for 2012b flight.
-      * Removed the SSID's that were split in .901.  Decided that it was easier to have a single Char array when it comes to dumping
-         the values out to the TNC's
-
+Version 3.0.0 - April 23, 2016 - Merged the ArduinoTrack and ArduinoTrack codebases into single file.  Comment out the #define AT_COMBINED to build/load the split system, or leave it in to build a combined.
+      * Changed the data type on the NCU lookup tables because of depreciated prog_uchar in avr/pgmspace.h
+      * Switched the simple delay variable to unsigned long so that delays of longer than 255 seconds are supported.
+      * Moved the install instructions into separate readme.txt.  (Note, editing the boards.txt file is no longer needed!)
+      * Upgrading to version 3.0.0 will require the configuration settings to be re-applied after updating.  No update to ArduinoTrack Configurator is required.
+Version history prior to 3.0 has been moved into the core readme.txt file...
 */
 
-#define FIRMWARE_VERSION "2.1.7"
+// Define the AT_COMBINED preprocessor macro to generate combined 
+//  firmware, or comment it out for separate ArduinoTrack / Modem (TNC)
+#define AT_COMBINED
+
+
+#define FIRMWARE_VERSION "3.0.0"
 #define CONFIG_VERSION "PT0002"
 #define CONFIG_PROMPT "\n# "
-
-#define SER_DEBUG
 
 
 // defines for setting and clearing register bits
@@ -59,6 +41,9 @@ Version .951 - Oct 18, 2012
 #ifndef sbi
 #define sbi(sfr, bit) (_SFR_BYTE(sfr) |= _BV(bit))
 #endif
+
+#define __PROG_TYPES_COMPAT__
+#include <avr/pgmspace.h>
 
 #include <SoftwareSerial.h>
 #include <EEPROM.h>
@@ -74,11 +59,10 @@ Version .951 - Oct 18, 2012
 
 #define PIN_GPS_RX 8
 #define PIN_GPS_TX 7
+
+//PIN_TNC's are used for the split Arduino/Arduino_modem units.  Can be ignored for Combined mode
 #define PIN_TNC_RX 12
 #define PIN_TNC_TX 11
-
-
-
 
 //How many MS to delay between subsequent packets (as in between GPGGA and GPRMC strings
 #define DELAY_MS_BETWEEN_XMITS 1250
@@ -107,7 +91,7 @@ struct udtConfig {
   char SymbolPage;
 
   byte BeaconType;    //0=seconds-delay, 1=Speed Smart Beaconing, 2=Altitude Smart Beaconing, 3=Time Slots
-  byte BeaconSimpleDelay;
+  unsigned long BeaconSimpleDelay;
 
   unsigned int BeaconAltitudeThreshLow;
   unsigned int BeaconAltitudeThreshHigh;
@@ -154,16 +138,101 @@ BMP180 Pressure;      //BMP180 pressure/temp sensor
 TMP102 OAT;    //TMP102 sensor for outside air temp
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+#ifdef AT_COMBINED
+	//------------------------------------------ Variables for the internal modulation ------------------------------------------
+	//Pin assignments
+	#define PIN_AUDIO_OUT 3
+	#define PIN_AUDIO_IN A0
+	#define PIN_PTT_OUT 2
+
+	#define BAUD_GENERATOR_COUNT 20
+
+	#define TONE_HIGH_STEPS_PER_TICK 6001
+	#define TONE_LOW_STEPS_PER_TICK 3273
+
+	//Sinewave lookup tables for high and low tones (the difference is the amplitude)
+	PROGMEM const unsigned char _arySineHigh[] = {128, 131, 134, 137, 140, 144, 147, 150, 153, 156,
+		159, 162, 165, 168, 171, 174, 177, 179, 182, 185,
+		188, 191, 193, 196, 199, 201, 204, 206, 209, 211,
+		213, 216, 218, 220, 222, 224, 226, 228, 230, 232,
+		234, 235, 237, 239, 240, 241, 243, 244, 245, 246,
+		248, 249, 250, 250, 251, 252, 253, 253, 254, 254,
+		254, 255, 255, 255, 255, 255, 255, 255, 254, 254,
+		254, 253, 253, 252, 251, 250, 250, 249, 248, 246,
+		245, 244, 243, 241, 240, 239, 237, 235, 234, 232,
+		230, 228, 226, 224, 222, 220, 218, 216, 213, 211,
+		209, 206, 204, 201, 199, 196, 193, 191, 188, 185,
+		182, 179, 177, 174, 171, 168, 165, 162, 159, 156,
+		153, 150, 147, 144, 140, 137, 134, 131, 128, 125,
+		122, 119, 116, 112, 109, 106, 103, 100, 97, 94,
+		91, 88, 85, 82, 79, 77, 74, 71, 68, 65,
+		63, 60, 57, 55, 52, 50, 47, 45, 43, 40,
+		38, 36, 34, 32, 30, 28, 26, 24, 22, 21,
+		19, 17, 16, 15, 13, 12, 11, 10, 8, 7,
+		6, 6, 5, 4, 3, 3, 2, 2, 2, 1,
+		1, 1, 1, 1, 1, 1, 2, 2, 2, 3,
+		3, 4, 5, 6, 6, 7, 8, 10, 11, 12,
+		13, 15, 16, 17, 19, 21, 22, 24, 26, 28,
+		30, 32, 34, 36, 38, 40, 43, 45, 47, 50,
+		52, 55, 57, 60, 63, 65, 68, 71, 74, 77,
+		79, 82, 85, 88, 91, 94, 97, 100, 103, 106,
+		109, 112, 116, 119, 122, 125};
+
+
+	//Max 192 (3db down from High)
+	PROGMEM const unsigned char _arySineLow[] = {128, 129, 130, 132, 133, 134, 135, 136, 137, 139,
+		140, 141, 142, 143, 144, 145, 146, 147, 149, 150,
+		151, 152, 153, 154, 155, 156, 157, 158, 158, 159,
+		160, 161, 162, 163, 164, 164, 165, 166, 167, 167,
+		168, 169, 169, 170, 170, 171, 171, 172, 172, 173,
+		173, 174, 174, 174, 175, 175, 175, 175, 175, 176,
+		176, 176, 176, 176, 176, 176, 176, 176, 176, 176,
+		175, 175, 175, 175, 175, 174, 174, 174, 173, 173,
+		172, 172, 171, 171, 170, 170, 169, 169, 168, 167,
+		167, 166, 165, 164, 164, 163, 162, 161, 160, 159,
+		158, 158, 157, 156, 155, 154, 153, 152, 151, 150,
+		149, 147, 146, 145, 144, 143, 142, 141, 140, 139,
+		137, 136, 135, 134, 133, 132, 130, 129, 128, 127,
+		126, 124, 123, 122, 121, 120, 119, 117, 116, 115,
+		114, 113, 112, 111, 110, 109, 107, 106, 105, 104,
+		103, 102, 101, 100, 99, 98, 98, 97, 96, 95,
+		94, 93, 92, 92, 91, 90, 89, 89, 88, 87,
+		87, 86, 86, 85, 85, 84, 84, 83, 83, 82,
+		82, 82, 81, 81, 81, 81, 81, 80, 80, 80,
+		80, 80, 80, 80, 80, 80, 80, 80, 81, 81,
+		81, 81, 81, 82, 82, 82, 83, 83, 84, 84,
+		85, 85, 86, 86, 87, 87, 88, 89, 89, 90,
+		91, 92, 92, 93, 94, 95, 96, 97, 98, 98,
+		99, 100, 101, 102, 103, 104, 105, 106, 107, 109,
+		110, 111, 112, 113, 114, 115, 116, 117, 119, 120,
+		121, 122, 123, 124, 126, 127};
+
+	//------------------------------------------ END Variables for the internal modulation ------------------------------------------
+#endif
+
+
 void setup() {
 
   pinMode(PIN_LED, OUTPUT);
   pinMode(PIN_AUDIO, OUTPUT);
 
   Serial.begin(19200);
-  oTNC.initKISS(PIN_TNC_RX, PIN_TNC_TX);      //Define this as a KISS-connected controller (i.e. this Arduino does NOT generate its own tones)
 
-  Serial.println(F("ArduinoTrack Flight Computer"));
+#ifdef AT_COMBINED
+	//Define as internally moduled TNC
+  oTNC.initInternal(PIN_PTT_OUT); 	//The PINS are defined in TNC.h.
+
+	pinMode(PIN_PTT_OUT, OUTPUT);
+  pinMode(PIN_AUDIO_OUT, OUTPUT);
+
+  Serial.println(F("ArduinoTrack_Combined Flight Computer"));
+#else
+	//Define as an external KISS-type of TNC (i.e. the ArduinoTrack Modem)
+	oTNC.initKISS(PIN_TNC_RX, PIN_TNC_TX);
+
+	Serial.println(F("ArduinoTrack Flight Computer"));
+#endif
+
   Serial.print(F("Firmware Version: "));
   Serial.println(FIRMWARE_VERSION);
 
@@ -186,7 +255,7 @@ void setup() {
   
   Serial.println(F("Init'ing TMP102 sensor"));
   OAT.begin();
-  
+
   //Check to see if we're going into config mode
   byte byTemp;
   while (millis() < 5000) {
@@ -212,10 +281,10 @@ void setup() {
 
   //see if we're using a uBlox GPS, and if so, init the GPS
   if (Config.GPSType == 1) {
-    //init the GPS into high altitude mode (Dynamic Model 6 – Airborne < 1g)
+    //init the GPS into high altitude mode (Dynamic Model 6 â€“ Airborne < 1g)
     initUblox();    //will continually retry this operation until its sucessful
   }
-  
+
   iLastErrorTxMillis = millis();      //set a starting time for the potential error messages
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -224,6 +293,7 @@ void loop() {
   float fCurrentAlt, fSpeed, fMaxSpeed;
   bool bXmit;
   int iSeconds;
+  unsigned long msDelay;    //calculate the number of milliseconds to delay
 
 
   collectGPSStrings();      //listen to the GPS for up to 3 seconds (the function will exit out as soon as a pair of RMC and GGA strings are received)
@@ -239,7 +309,7 @@ void loop() {
 
       annunciate('g');
       oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, true);
-      oTNC.xmitString(">Lost comm with GPS for more than 45 seconds!!!");
+      oTNC.xmitString(">Lost GPS for over 45 seconds!");
       oTNC.xmitEnd();
 
       iLastErrorTxMillis = millis();      //track the fact that we just transmitted
@@ -258,16 +328,15 @@ void loop() {
     }
   }
 
-
-
   bXmit = false;    //assume that we won't transmit this time around
-
 
   //Figure out how long to delay before the next packet
   switch (Config.BeaconType) {
   case 0:
     //This is no logic to beacon intervals - just plan old time delays
-     if ((millis() - timeLastXmit) > Config.BeaconSimpleDelay * 1000) {
+    msDelay = (unsigned long)Config.BeaconSimpleDelay * 1000;    //cast this to unsigned long
+    
+     if ((millis() - timeLastXmit) > msDelay) {
       //we've waited long enough - transmit
       bXmit = true;
     }
@@ -279,11 +348,11 @@ void loop() {
     fSpeed = GPSParser.Knots();        //get the current speed
     if (fSpeed > fMaxSpeed) fMaxSpeed = fSpeed;
 
-
-
     if (fMaxSpeed < Config.BeaconSpeedThreshLow) {
       //we're in the slow range
-      if ((millis() - timeLastXmit) > Config.BeaconSpeedDelayLow * 1000) {
+      msDelay = (unsigned long)Config.BeaconSpeedDelayLow * 1000;    //cast this to unsigned long
+      
+      if ((millis() - timeLastXmit) > msDelay) {
         //we've waited long enough for this speed - transmit
         bXmit = true;
       }
@@ -291,7 +360,9 @@ void loop() {
 
     if (fSpeed >= Config.BeaconSpeedThreshLow && fSpeed < Config.BeaconSpeedThreshHigh) {
       //we're in the medium range
-      if ((millis() - timeLastXmit) > Config.BeaconSpeedDelayMid) {
+      msDelay = (unsigned long)Config.BeaconSpeedDelayMid * 1000;    //cast this to unsigned long
+      
+      if ((millis() - timeLastXmit) > msDelay) {
         //we've waited long enough for this speed - transmit
         bXmit = true;
       }
@@ -299,7 +370,9 @@ void loop() {
 
     if (fSpeed >= Config.BeaconSpeedThreshHigh) {
       //we're in the fast range
-      if ((millis() - timeLastXmit) > Config.BeaconSpeedDelayHigh) {
+      msDelay = (unsigned long)Config.BeaconSpeedDelayHigh * 1000;    //cast this to unsigned long
+      
+      if ((millis() - timeLastXmit) > msDelay) {
         //we've waited long enough for this speed - transmit
         bXmit = true;
       }
@@ -311,21 +384,27 @@ void loop() {
 
     if (fCurrentAlt < Config.BeaconAltitudeThreshLow) {
       //we're in the low phase of the flight - we'll typically send packets more frequently close to the ground
-      if ((millis() - timeLastXmit) > Config.BeaconAltitudeDelayLow * 1000) {
+      msDelay = (unsigned long)Config.BeaconAltitudeDelayLow * 1000;    //cast this to unsigned long
+      
+      if ((millis() - timeLastXmit) > msDelay) {
         //we've waited long enough for this speed - transmit
         bXmit = true;
       }
     }
     if (fCurrentAlt >= Config.BeaconAltitudeThreshLow && fCurrentAlt < Config.BeaconAltitudeThreshHigh) {
       //we're in the mid-phase of the flight.  We'll transmit regularly in here
-      if ((millis() - timeLastXmit) > Config.BeaconAltitudeDelayMid * 1000) {
+      msDelay = (unsigned long)Config.BeaconAltitudeDelayMid * 1000;    //cast this to unsigned long
+      
+      if ((millis() - timeLastXmit) > msDelay) {
         //we've waited long enough for this speed - transmit
         bXmit = true;
       }
     }
     if (fCurrentAlt >= Config.BeaconAltitudeThreshHigh) {
       //we're in the top-phase of the flight.  Transmit more frequenly to get better burst resolution?
-      if ((millis() - timeLastXmit) > Config.BeaconAltitudeDelayHigh * 1000) {
+      msDelay = (unsigned long)Config.BeaconAltitudeDelayHigh * 1000;    //cast this to unsigned long
+      
+      if ((millis() - timeLastXmit) > msDelay) {
         //we've waited long enough for this speed - transmit
         bXmit = true;
       }
@@ -360,7 +439,7 @@ void loop() {
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void sendPositionSingleLine() {
-  char szTemp[30];
+  char szTemp[15];    //largest string held should be the longitude
   int i;
   double insideTemp;    //inside air temp
   double outsideTemp;    //outside air temp
@@ -369,7 +448,8 @@ void sendPositionSingleLine() {
 
   char statusIAT = 0;
   char statusOAT = 0;
-
+  
+  
   if (Config.StatusXmitPressure || Config.StatusXmitTemp) {
     //we're supposed to transmit the air pressure and/or temp - go ahead and pre-fetch it
 
@@ -382,15 +462,12 @@ void sendPositionSingleLine() {
       statusIAT = Pressure.getTemperature(insideTemp);
       if (statusIAT != 0) {
         statusIAT = Pressure.startPressure(3);
-
-        if (statusIAT != 0)
-        {
+        if (statusIAT != 0) {
           // Wait for the measurement to complete:
           delay(statusIAT);
 
           statusIAT = Pressure.getPressure(airPressure, insideTemp);
-          if (statusIAT == 0)
-          {
+          if (statusIAT == 0) {
             //we had some sort of problem with getting the air pressure - set it to zero
             airPressure = 0.0;
           }
@@ -403,9 +480,8 @@ void sendPositionSingleLine() {
     }
     statusOAT = OAT.getTemperature(outsideTemp);
   }
-  
-  oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, (GPSParser.Altitude() < Config.DisablePathAboveAltitude));
 
+  oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, (GPSParser.Altitude() < Config.DisablePathAboveAltitude));
 
   //      /155146h3842.00N/09655.55WO301/017/A=058239
   int hh = 0, mm = 0, ss = 0;
@@ -420,16 +496,15 @@ void sendPositionSingleLine() {
   oTNC.xmitString(szTemp);
 
   oTNC.xmitString("h");
-
   //Latitude
   GPSParser.getLatitude(szTemp);
   i=0;
+
   while (i<7 && szTemp[i]) {
     oTNC.xmitChar(szTemp[i]);
     i++;
   }
   oTNC.xmitChar(GPSParser.LatitudeHemi());
-
   oTNC.xmitChar(Config.SymbolPage);
 
   //Longitude
@@ -448,7 +523,6 @@ void sendPositionSingleLine() {
 
   sprintf(szTemp, "%03d", (int)fTemp);
   oTNC.xmitString(szTemp);
-
   oTNC.xmitChar('/');
 
   //Speed in knots
@@ -457,13 +531,10 @@ void sendPositionSingleLine() {
   sprintf(szTemp, "%03d", (int)fTemp);
   oTNC.xmitString(szTemp);
 
-
   oTNC.xmitString("/A=");
-
   //Altitude in Feet
   fTemp = GPSParser.AltitudeInFeet();
   oTNC.xmitLong((long)fTemp, true);
-
 
   if (Config.StatusXmitGPSFix) {
     //Fix quality and num sats
@@ -474,41 +545,34 @@ void sendPositionSingleLine() {
     } else {
       oTNC.xmitString(" na");
     }
+
     sprintf(szTemp, "%dSats", GPSParser.NumSats());
     oTNC.xmitString(szTemp);
-
   }
-
   if (Config.StatusXmitBatteryVoltage) {
     int iBattery = analogRead(PIN_ANALOG_BATTERY);
     float fVolts = (float)iBattery / 204.8;    //204.8 points per volt,
     fVolts = fVolts * 3.141;        //times (147/100) to adjust for the resistor divider
     fVolts = fVolts + 0.19;      //account for the inline diode on the power supply
 
-
     oTNC.xmitString(" Batt=");
     oTNC.xmitFloat(fVolts);
-
   }
 
   if (Config.StatusXmitTemp) {
-    if (statusIAT) {
-      oTNC.xmitString(" IAT=");
-      oTNC.xmitFloat((float)insideTemp);
-    }
-    
-    if (statusOAT) {
+    oTNC.xmitString(" IAT=");
+    oTNC.xmitFloat((float)insideTemp);
+  
+    if (statusOAT != 0) {
       oTNC.xmitString(" OAT=");
       oTNC.xmitFloat((float)outsideTemp);
     }
   }
-  if (Config.StatusXmitPressure) {
-    if (statusIAT) {
-      oTNC.xmitString(" Press=");
-      oTNC.xmitFloat((float)airPressure);
-    }
-  }
 
+  if (Config.StatusXmitPressure) {
+    oTNC.xmitString(" Press=");
+    oTNC.xmitFloat((float)airPressure);
+  }
 
   if (Config.StatusXmitBurstAltitude && bHasBurst) {
     oTNC.xmitString(" Burst=");
@@ -523,11 +587,6 @@ void sendPositionSingleLine() {
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void collectGPSStrings() {
-
-#ifdef SER_DEBUG
-Serial.println(F("Collecting GPS..."));
-#endif
-
   SoftwareSerial GPS(PIN_GPS_RX, PIN_GPS_TX, Config.GPSSerialInvert);    //A True at the end indicates that the serial data is inverted.
 
   //figure out the baud rate for the data coming in
@@ -577,9 +636,6 @@ Serial.println(F("Collecting GPS..."));
     }
   }
 
-#ifdef SER_DEBUG
-Serial.println(F("Stop collection. Probably timed out."));
-#endif
   return;
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -598,7 +654,7 @@ void annunciate(char c) {
     audioTone(DELAY_DIT);
     break;
   case 'e':
-    //single chirp
+    //single chirp - Used during initialization of uBlox GPS
     audioTone(DELAY_DIT);
     break;
   case 'g':
@@ -610,7 +666,7 @@ void annunciate(char c) {
     audioTone(DELAY_DIT);
     break;
   case 'i':
-    //double chirp
+    //double chirp - Used to confirm initialization of uBlox GPS
     audioTone(DELAY_DIT);
     delay(DELAY_GAP);
     audioTone(DELAY_DIT);
@@ -623,7 +679,6 @@ void annunciate(char c) {
     delay(DELAY_GAP);
     audioTone(DELAY_DAH);
     break;
-
   case 'l':
   	//Used during loss of GPS lock
     audioTone(DELAY_DIT);
@@ -634,24 +689,16 @@ void annunciate(char c) {
     delay(DELAY_GAP);
     audioTone(DELAY_DIT);
     break;
-
-  case 'o':
-    audioTone(DELAY_DAH);
-    delay(DELAY_GAP);
-    audioTone(DELAY_DAH);
-    delay(DELAY_GAP);
-    audioTone(DELAY_DAH);
-    break;
-
   case 'w':
+    //Indicates that configuration settings were written to EEPROM
     audioTone(DELAY_DIT);
     delay(DELAY_GAP);
     audioTone(DELAY_DAH);
     delay(DELAY_GAP);
     audioTone(DELAY_DAH);
     break;
-    
   case 'x':
+    //Used when exercising the board to test for functionality
     audioTone(DELAY_DAH);
     delay(DELAY_GAP);
     audioTone(DELAY_DIT);
@@ -748,7 +795,6 @@ bool ubloxSendUBX() {
   while (millis() < ulUntil ) {
     // Test for success
     if (ackByteID > 9) return true;    //we had all 9 bytes come back through - valid response!!!
-
 
     // Make sure data is available to read
     if (GPS.available()) {
@@ -1306,3 +1352,74 @@ void sendConfigToPC() {
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+
+#ifdef AT_COMBINED
+	//------------------------------------------ Functions and Timers  for the internal modulation ------------------------------------------
+	ISR(TIMER1_COMPA_vect) {
+	  static boolean bBaudFlip = 0;
+	  static byte iStuffZero = 0;
+	  static boolean bStuffBit = false;
+
+
+	  static byte iRateGen;
+	  static unsigned int iTonePhase = 0;      //two byte variable.  The highByte contains the element in arySine that should be output'ed
+	  static boolean bToneHigh = 0;
+
+
+	  //digitalWrite(PIN_TP_ISRTIME, HIGH);    //measure how long the ISR is taking to execute
+
+	  //increment the phase counter.  It will overflow automatically at > 65535
+	  if (bToneHigh) {
+	    analogWrite(PIN_AUDIO_OUT, (pgm_read_byte_near(_arySineHigh + highByte(iTonePhase))));
+	    iTonePhase += TONE_HIGH_STEPS_PER_TICK;
+	  } else {
+	    analogWrite(PIN_AUDIO_OUT, (pgm_read_byte_near(_arySineLow + highByte(iTonePhase))));
+	    iTonePhase += TONE_LOW_STEPS_PER_TICK;
+	  }
+
+	  iRateGen--;
+
+
+	  if (iRateGen == 0) {
+	    //it's time for the next bit
+
+	    //used to measure the baud rate frequency.  Can be deleted for production
+	    //digitalWrite(PIN_TP_BAUDRATE, bBaudFlip);
+	    //bBaudFlip = !bBaudFlip;
+
+	    if (bStuffBit) {
+	      //we hit the stuffing counter  - we don't need to get the next bit yet, just change the tone and send one bit
+	      bToneHigh = !bToneHigh;
+	      iStuffZero = 0;
+
+	      bStuffBit = false;    //reset this so we don't keep stuffing
+
+	    } else {
+	      //this is just a normal bit - grab the next bit from the szString
+
+	      if (oTNC.getNextBit() == 0) {
+	        //we only flip the output state if we have a zero
+
+	        //Flip Bit
+	        bToneHigh = !bToneHigh;
+	        iStuffZero = 0;
+	      } else {
+	        //it's a 1, so send the same tone...
+
+	        iStuffZero++;      //increament the stuffing counter
+
+	        //if there's been 5 in a row, then we need to stuff an extra bit in, and change the tone for that one
+	        if (iStuffZero == 5 && !oTNC.noBitStuffing()) {
+	          bStuffBit = true;      //once we hit five, we let this fifth (sixth?) one go, then we set a flag to flip the tone and send a bogus extra bit next time
+	        }
+	      }
+	    }
+
+	    iRateGen = BAUD_GENERATOR_COUNT;
+	  }
+
+	  //digitalWrite(PIN_TP_ISRTIME, LOW);
+	}
+#endif
