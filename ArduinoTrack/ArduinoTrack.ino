@@ -16,6 +16,11 @@ ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
+Version 3.1.1 - June 20, 2018 - Switched to BME280 from BMP280 for board version 1.0.1.
+Version 3.1.0 - May 15, 2018 - Changes to support the new Flex board style
+      * Implemented the BMP/BME280 for the ArduinoFlex board.
+      * Added (char *) to the string constants to eliminate a compile time warning
+      * Created separate defines to AT_COMBINED, AT_MODEM, and AT_FLEX.  Extended the #ifdef logic to handle new scenarios
 Version 3.0.0 - April 23, 2016 - Merged the ArduinoTrack and ArduinoTrack codebases into single file.  Comment out the #define AT_COMBINED to build/load the split system, or leave it in to build a combined.
       * Changed the data type on the NCU lookup tables because of depreciated prog_uchar in avr/pgmspace.h
       * Switched the simple delay variable to unsigned long so that delays of longer than 255 seconds are supported.
@@ -24,12 +29,14 @@ Version 3.0.0 - April 23, 2016 - Merged the ArduinoTrack and ArduinoTrack codeba
 Version history prior to 3.0 has been moved into the core readme.txt file...
 */
 
-// Define the AT_COMBINED preprocessor macro to generate combined 
-//  firmware, or comment it out for separate ArduinoTrack / Modem (TNC)
-#define AT_COMBINED
+// Uncomment one of the following three lines, depending on how you are programming your ArduinoTrack.  Combined is the single board AT that does everything.  AT_MODEM 
+//  is an ArduinoTrack that is configured just to be a modem.  AT_FLEX is the newer style board, known as the "Flex" board.
+//define AT_COMBINED
+//define AT_MODEM
+#define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.0.0"
+#define FIRMWARE_VERSION "3.1.1"
 #define CONFIG_VERSION "PT0002"
 #define CONFIG_PROMPT "\n# "
 
@@ -50,7 +57,15 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #include "TNC.h"
 #include "GPS.h"
 #include "TMP102.h"
-#include "BMP180.h"
+
+#ifdef AT_COMBINED
+  #include "BMP180.h"
+#endif
+
+#ifdef AT_FLEX
+  #include "SparkFunBME280.h"
+#endif
+
 #include <Wire.h>
 
 #define PIN_AUDIO 5
@@ -134,11 +149,16 @@ unsigned long iLastErrorTxMillis;    //keep track of the timestamp of the last "
 bool bHasBurst;
 float fMaxAlt;
 
-BMP180 Pressure;      //BMP180 pressure/temp sensor
+#ifdef AT_COMBINED
+  BMP180 Pressure;      //BMP180 pressure/temp sensor
+#endif
+#ifdef AT_FLEX
+  BME280 Pressure;      //BMP280 pressure/temp sensor
+#endif
 TMP102 OAT;    //TMP102 sensor for outside air temp
 
 
-#ifdef AT_COMBINED
+#if defined(AT_COMBINED) || defined(AT_FLEX)
 	//------------------------------------------ Variables for the internal modulation ------------------------------------------
 	//Pin assignments
 	#define PIN_AUDIO_OUT 3
@@ -218,7 +238,7 @@ void setup() {
 
   Serial.begin(19200);
 
-#ifdef AT_COMBINED
+#if defined(AT_COMBINED) || defined(AT_FLEX)
 	//Define as internally moduled TNC
   oTNC.initInternal(PIN_PTT_OUT); 	//The PINS are defined in TNC.h.
 
@@ -248,10 +268,21 @@ void setup() {
   annunciate('k');
 
   //init the I2C devices
+#ifdef AT_COMBINED
   Serial.println(F("Init'ing BMP180 sensor"));
   if (!Pressure.begin()) {
     Serial.println(F(" Could NOT init!"));
   }
+#endif
+#ifdef AT_FLEX
+  Serial.println(F("Init'ing BME280 sensor"));
+  Pressure.setI2CAddress(0x76);
+  if (Pressure.beginI2C() == false) //Begin communication over I2C
+  {
+    Serial.println(F(" Could NOT init!"));
+  }
+#endif  
+
   
   Serial.println(F("Init'ing TMP102 sensor"));
   OAT.begin();
@@ -274,9 +305,9 @@ void setup() {
 
   //Send out an initial packet announcing itself.
   oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, true);
-  oTNC.xmitString(">Project Traveler ArduinoTrack Controller v");
-  oTNC.xmitString(FIRMWARE_VERSION);
-  oTNC.xmitString(" Initializing...");
+  oTNC.xmitString((char *)">Project Traveler ArduinoTrack Controller v");
+  oTNC.xmitString((char *)FIRMWARE_VERSION);
+  oTNC.xmitString((char *)" Initializing...");
   oTNC.xmitEnd();
 
   //see if we're using a uBlox GPS, and if so, init the GPS
@@ -309,7 +340,7 @@ void loop() {
 
       annunciate('g');
       oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, true);
-      oTNC.xmitString(">Lost GPS for over 45 seconds!");
+      oTNC.xmitString((char *)">Lost GPS for over 45 seconds!");
       oTNC.xmitEnd();
 
       iLastErrorTxMillis = millis();      //track the fact that we just transmitted
@@ -453,6 +484,9 @@ void sendPositionSingleLine() {
   if (Config.StatusXmitPressure || Config.StatusXmitTemp) {
     //we're supposed to transmit the air pressure and/or temp - go ahead and pre-fetch it
 
+
+
+#ifdef AT_COMBINED
     //First we need to capture the air temp (part of the pressure equation)
     char statusIAT = Pressure.startTemperature();
     if (statusIAT != 0) {
@@ -479,14 +513,22 @@ void sendPositionSingleLine() {
       }
     }
     statusOAT = OAT.getTemperature(outsideTemp);
-  }
 
+#endif
+#ifdef AT_FLEX
+  airPressure = (double)Pressure.readFloatPressure();
+  airPressure = airPressure / 100;    //convert back to simple airpressure in hPa
+  insideTemp = (double)Pressure.readTempC();
+  //insideTemp = insideTemp / 100;    //convert back to decimal
+#endif
+
+  }
   oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, (GPSParser.Altitude() < Config.DisablePathAboveAltitude));
 
   //      /155146h3842.00N/09655.55WO301/017/A=058239
   int hh = 0, mm = 0, ss = 0;
   GPSParser.getGPSTime(&hh, &mm, &ss);
-  oTNC.xmitString("/");
+  oTNC.xmitString((char *)"/");
 
   sprintf(szTemp, "%02d", hh);
   oTNC.xmitString(szTemp);
@@ -495,7 +537,7 @@ void sendPositionSingleLine() {
   sprintf(szTemp, "%02d", ss);
   oTNC.xmitString(szTemp);
 
-  oTNC.xmitString("h");
+  oTNC.xmitString((char *)"h");
   //Latitude
   GPSParser.getLatitude(szTemp);
   i=0;
@@ -531,7 +573,7 @@ void sendPositionSingleLine() {
   sprintf(szTemp, "%03d", (int)fTemp);
   oTNC.xmitString(szTemp);
 
-  oTNC.xmitString("/A=");
+  oTNC.xmitString((char *)"/A=");
   //Altitude in Feet
   fTemp = GPSParser.AltitudeInFeet();
   oTNC.xmitLong((long)fTemp, true);
@@ -541,9 +583,9 @@ void sendPositionSingleLine() {
 
     if (GPSParser.FixQuality() >= 1 && GPSParser.FixQuality() <=3) {
       //we have a GPS, DGPS, or PPS fix
-      oTNC.xmitString(" 3D");
+      oTNC.xmitString((char *)" 3D");
     } else {
-      oTNC.xmitString(" na");
+      oTNC.xmitString((char *)" na");
     }
 
     sprintf(szTemp, "%dSats", GPSParser.NumSats());
@@ -555,27 +597,27 @@ void sendPositionSingleLine() {
     fVolts = fVolts * 3.141;        //times (147/100) to adjust for the resistor divider
     fVolts = fVolts + 0.19;      //account for the inline diode on the power supply
 
-    oTNC.xmitString(" Batt=");
+    oTNC.xmitString((char *)" Batt=");
     oTNC.xmitFloat(fVolts);
   }
 
   if (Config.StatusXmitTemp) {
-    oTNC.xmitString(" IAT=");
+    oTNC.xmitString((char *)" IAT=");
     oTNC.xmitFloat((float)insideTemp);
   
     if (statusOAT != 0) {
-      oTNC.xmitString(" OAT=");
+      oTNC.xmitString((char *)" OAT=");
       oTNC.xmitFloat((float)outsideTemp);
     }
   }
 
   if (Config.StatusXmitPressure) {
-    oTNC.xmitString(" Press=");
+    oTNC.xmitString((char *)" Press=");
     oTNC.xmitFloat((float)airPressure);
   }
 
   if (Config.StatusXmitBurstAltitude && bHasBurst) {
-    oTNC.xmitString(" Burst=");
+    oTNC.xmitString((char *)" Burst=");
     fTemp = fMaxAlt * METERS_TO_FEET;
     oTNC.xmitLong((long)fTemp, true);
   }
@@ -888,7 +930,7 @@ void doConfigMode() {
 
   Serial.println(F("ArduinoTrack Flight Computer"));
   Serial.print(F("Firmware Version: "));
-  Serial.print(FIRMWARE_VERSION);
+  Serial.print((char *)FIRMWARE_VERSION);
   Serial.print(F("   Config Version: "));
   Serial.println(CONFIG_VERSION);
   Serial.print(CONFIG_PROMPT);
@@ -903,7 +945,7 @@ void doConfigMode() {
       if (byTemp == '!') {
         Serial.println(F("ArduinoTrack Flight Computer"));
         Serial.print(F("Firmware Version: "));
-        Serial.print(FIRMWARE_VERSION);
+        Serial.print((char *)FIRMWARE_VERSION);
         Serial.print(F("   Config Version: "));
         Serial.println(CONFIG_VERSION);
         Serial.print(CONFIG_PROMPT);
@@ -994,17 +1036,18 @@ void doConfigMode() {
   
         collectGPSStrings();   //check the GPS  
   
-        double airTemp;    //inside air temp
+        double insideTemp;    //inside air temp
         double airPressure;    //millibars
+        char status;
   
-  
-        char status = Pressure.startTemperature();
+#ifdef AT_COMBINED  
+        status = Pressure.startTemperature();
 
         if (status != 0) {
           // Wait for the measurement to complete:
           delay(status);
     
-          status = Pressure.getTemperature(airTemp);
+          status = Pressure.getTemperature(insideTemp);
           if (status != 0) {
             status = Pressure.startPressure(3);
     
@@ -1013,7 +1056,7 @@ void doConfigMode() {
               // Wait for the measurement to complete:
               delay(status);
     
-              status = Pressure.getPressure(airPressure,airTemp);
+              status = Pressure.getPressure(airPressure, insideTemp);
               if (status == 0)
               {
                 //we had some sort of problem with getting the air pressure - set it to zero
@@ -1022,25 +1065,31 @@ void doConfigMode() {
             }
           } else {
             //problem getting air temp
-            airTemp = 0.0;
+            insideTemp = 0.0;
             airPressure = 0.0;
           }
         }
-    
+#endif
+#ifdef AT_FLEX
+        airPressure = (double)Pressure.readFloatPressure();
+        airPressure = airPressure / 100;    //convert back to simple airpressure in hPa
+        insideTemp = (double)Pressure.readTempC();
+        //insideTemp = insideTemp / 100;    //convert back to decimal
+#endif
         Serial.print(F("IAT: "));
-        Serial.println(airTemp);
+        Serial.println(insideTemp);
         Serial.print(F("Pressure: "));
         Serial.println(airPressure);   
         
         //Read external temp
-        airTemp = 0.0;
+        insideTemp = 0.0;
         
         Serial.print(F("OAT: "));
-        status = OAT.getTemperature(airTemp);
+        status = OAT.getTemperature(insideTemp);
         if (status == 0) {
           Serial.println("n/a");
         } else {
-          Serial.println(airTemp);
+          Serial.println(insideTemp);
         }
         
         
@@ -1355,7 +1404,7 @@ void sendConfigToPC() {
 
 
 
-#ifdef AT_COMBINED
+#if defined(AT_COMBINED) || defined(AT_FLEX)
 	//------------------------------------------ Functions and Timers  for the internal modulation ------------------------------------------
 	ISR(TIMER1_COMPA_vect) {
 	  static boolean bBaudFlip = 0;
