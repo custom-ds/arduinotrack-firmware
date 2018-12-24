@@ -19,6 +19,7 @@ Version History:
 Version 3.1.2 - December 24, 2018 - Important Bug fixes!
       * Fixed issue in GPS.cpp for E/S hemispheres (thanks Micha Schroeder, DC1MAK)
       * Fixed issue in TNC.cpp for formatting numbers above 100 (thanks Mark Conner, N9XTN)
+      * Fixed issue with OAT temp not working with Flex board
 Version 3.1.1 - June 20, 2018 - Switched to BME280 from BMP280 for board version 1.0.1.
 Version 3.1.0 - May 15, 2018 - Changes to support the new Flex board style
       * Implemented the BMP/BME280 for the ArduinoFlex board.
@@ -39,7 +40,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.1.1"
+#define FIRMWARE_VERSION "3.1.2"
 #define CONFIG_VERSION "PT0002"
 #define CONFIG_PROMPT "\n# "
 
@@ -523,6 +524,8 @@ void sendPositionSingleLine() {
   airPressure = airPressure / 100;    //convert back to simple airpressure in hPa
   insideTemp = (double)Pressure.readTempC();
   //insideTemp = insideTemp / 100;    //convert back to decimal
+
+  statusOAT = OAT.getTemperature(outsideTemp);  
 #endif
 
   }
