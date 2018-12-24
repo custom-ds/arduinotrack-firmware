@@ -114,7 +114,7 @@ void TNC::xmitEnd(void) {
     _CRC = 0xFFFF;    //init the CRC variable
     
     digitalWrite(_pinPTT, HIGH);    //push the PTT
-    delay(250);
+    delay(250);			//FIX FOR DRA818V
     
     _startTimer1ISR();
   
@@ -186,6 +186,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -200,6 +201,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -213,6 +215,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -226,6 +229,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -239,6 +243,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   xmitChar(lNumToSend + 48);        //always send the ones digit

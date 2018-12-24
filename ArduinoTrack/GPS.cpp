@@ -165,7 +165,7 @@ void GPS::parseRMC() {
 	ptrTemp = skipToNext(ptrTemp);			//skip thru the rest of the chars in the time
 
 	//see if we have valid fix (A) or invalid (V)
-	getString(ptrTemp, sz, 1);
+	getString(ptrTemp, sz, 2);
 	if (sz[0] == 'A') {
 		_bFixValid = true;
 	} else {
@@ -183,7 +183,7 @@ void GPS::parseRMC() {
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
-	getString(ptrTemp, sz, 1);
+	getString(ptrTemp, sz, 2);
 	if (sz[0] == 'S') {
 		_cLatitudeHemi = 'S';
 	} else {
@@ -201,7 +201,7 @@ void GPS::parseRMC() {
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
-	getString(ptrTemp, sz, 1);
+	getString(ptrTemp, sz, 2);
 	if (sz[0] == 'E') {
 		_cLongitudeHemi = 'E';
 	} else {
@@ -263,7 +263,7 @@ void GPS::parseGGA() {
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
-	getString(ptrTemp, sz, 1);
+	getString(ptrTemp, sz, 2);
 	if (sz[0] == 'S') {
 		_cLatitudeHemi = 'S';
 	} else {
@@ -281,7 +281,7 @@ void GPS::parseGGA() {
 	ptrTemp = skipToNext(ptrTemp);
 
 	//get Latitude Hemisphere
-	getString(ptrTemp, sz, 1);
+	getString(ptrTemp, sz, 2);
 	if (sz[0] == 'E') {
 		_cLongitudeHemi = 'E';
 	} else {
