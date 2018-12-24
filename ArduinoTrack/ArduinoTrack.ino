@@ -1,7 +1,7 @@
 
 /*
 ArduinoTrack
-Copywrite 2011-2016 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+Copywrite 2011-2018 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
@@ -16,6 +16,9 @@ ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
+Version 3.1.2 - December 24, 2018 - Important Bug fixes!
+      * Fixed issue in GPS.cpp for E/S hemispheres (thanks Micha Schroeder, DC1MAK)
+      * Fixed issue in TNC.cpp for formatting numbers above 100 (thanks Mark Conner, N9XTN)
 Version 3.1.1 - June 20, 2018 - Switched to BME280 from BMP280 for board version 1.0.1.
 Version 3.1.0 - May 15, 2018 - Changes to support the new Flex board style
       * Implemented the BMP/BME280 for the ArduinoFlex board.
