@@ -185,6 +185,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -199,6 +200,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -212,6 +214,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -225,6 +228,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   iCnt = 0;
@@ -238,6 +242,7 @@ void TNC::xmitLong(long lNumToSend, boolean bLeadingZero) {
     }
   } else {
     xmitChar(iCnt + 48);
+    bLeadingZero = true;    //we've sent a digit, so now always send subsequent zeros
   }
   
   xmitChar(lNumToSend + 48);        //always send the ones digit
