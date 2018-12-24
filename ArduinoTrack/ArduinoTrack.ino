@@ -72,8 +72,11 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #define PIN_LED 13
 #define PIN_ANALOG_BATTERY A1
 
-#define PIN_GPS_RX 8
 #define PIN_GPS_TX 7
+#define PIN_GPS_RX 8
+#define PIN_DRA_TX 10
+#define PIN_DRA_RX 9
+#define PIN_DRA_EN 4
 
 //PIN_TNC's are used for the split Arduino/Arduino_modem units.  Can be ignored for Combined mode
 #define PIN_TNC_RX 12
@@ -251,6 +254,10 @@ void setup() {
 	oTNC.initKISS(PIN_TNC_RX, PIN_TNC_TX);
 
 	Serial.println(F("ArduinoTrack Flight Computer"));
+#endif
+
+#ifdef AT_FLEX
+  initDRA818();
 #endif
 
   Serial.print(F("Firmware Version: "));
@@ -776,6 +783,21 @@ void audioTone(int length) {
     digitalWrite(PIN_LED, LOW);
   }
 
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void initDRA818(void) {
+
+  digitalWrite(PIN_DRA_EN, HIGH);
+  
+  Serial.println(F("Init DRA Transmitter"));
+  SoftwareSerial DRA(PIN_DRA_RX, PIN_DRA_TX, false);    //A True at the end indicates that the serial data is inverted.
+  DRA.begin(9600);
+  DRA.print("AT+DMOCONNECT\r\n");
+  Serial.println(F("  connected"));
+  delay(250);
+  DRA.print("AT+DMOSETGROUP=0,144.3400,144.3400,0000,4,0000\r\n");
+  Serial.println(F("   Set to 144.34"));
+  delay(1000);      //wait for transmitter to change frequency
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initUblox(void) {

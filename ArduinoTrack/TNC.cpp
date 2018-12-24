@@ -114,6 +114,7 @@ void TNC::xmitEnd(void) {
     _CRC = 0xFFFF;    //init the CRC variable
     
     digitalWrite(_pinPTT, HIGH);    //push the PTT
+    delay(250);
     
     _startTimer1ISR();
   

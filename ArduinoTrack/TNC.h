@@ -32,7 +32,8 @@ You should have received a copy of the GNU General Public License along with Ard
 
 // 16MHz / 666 = 24.024kHz.  24kHz / 20 / 1201Hz baud
 #define TIMER1_SEED 666
-#define TX_DELAY_LEN 50
+//Original TX_Delay_len = 50
+#define TX_DELAY_LEN 100
 
 #define MAX_SZXMIT_SIZE 200
 
