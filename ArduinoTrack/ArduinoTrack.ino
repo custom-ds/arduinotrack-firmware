@@ -30,14 +30,14 @@ Version 3.0.0 - April 23, 2016 - Merged the ArduinoTrack and ArduinoTrack codeba
       * Switched the simple delay variable to unsigned long so that delays of longer than 255 seconds are supported.
       * Moved the install instructions into separate readme.txt.  (Note, editing the boards.txt file is no longer needed!)
       * Upgrading to version 3.0.0 will require the configuration settings to be re-applied after updating.  No update to ArduinoTrack Configurator is required.
-Version history prior to 3.0 has been moved into the core readme.txt file...
+Version history prior to 3.0 has been moved into the core readme.md file...
 */
 
 // Uncomment one of the following three lines, depending on how you are programming your ArduinoTrack.  Combined is the single board AT that does everything.  AT_MODEM 
 //  is an ArduinoTrack that is configured just to be a modem.  AT_FLEX is the newer style board, known as the "Flex" board.
-//define AT_COMBINED
+#define AT_COMBINED
 //define AT_MODEM
-#define AT_FLEX
+//define AT_FLEX
 
 
 #define FIRMWARE_VERSION "3.1.2"
