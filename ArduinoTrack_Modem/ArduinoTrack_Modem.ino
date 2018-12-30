@@ -1,6 +1,6 @@
 /*
 ArduinoTrack_Modem
-Copywrite 2011-2016 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+Copywrite 2011-2018 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
@@ -15,22 +15,12 @@ ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
+Version 3.1.2 - December 24, 2018 - Important Bug fix!  Fixed issue in TNC.cpp for formatting numbers above 100 (thanks Mark Conner, N9XTN).  Sync'ed code with main ArduinoTrack firmware.
 Version 3.0.0 - April 23, 2016 - No major changes to firmware, only fixing depreciated data type, and moving the install install instructions into readme.txt.  Bringing to version 3.0 for consistency with ArduinoTrack firmware.
-Version 2.1.3 - May 23, 2015 - Adjusted the firmware programming instructions.
-Version 2.1.0 - May 3, 2015 - Minor changes to code to bring compliance with PCB version 1.10.
-Version 2.0.3 - March 29, 2015 - Simple change to instructions only to accomidate Arduino IDE 1.6.2.  Also changed high fuse to keep eeprom values from being reset during firmware flash.
-Version 2.0.2 - February 27, 2015 - Altered the HighBit to prevent the erasure of eeprom data after firmware updates. Uploaded firmware to GitHub.
-Version 2.0.1 - February 14, 2015 - Updated tnc.cpp to include additional debugging and fixed an issue with PWM audio on PIN_AUDIO_OUT.
-Version 2.0.0 - January 15, 2015 - Integrated the common TNC library into the modem Sketch.  Licensed ArduinoTrack_Modem
-  under the GPL3 license.
-Version 1.9.0 - January 8, 2015 - Moved the arySineHigh and arySineLow into Flash ROM to conserve SRAM.
-
-
-See www.projecttraveler.org for full construction and programming instructions.
-
+Version history prior to 3.0 has been moved into the core readme.md file...
 */
 
-#define FIRMWARE_VERSION "3.0.0"
+#define FIRMWARE_VERSION "3.1.2"
 
 
 
