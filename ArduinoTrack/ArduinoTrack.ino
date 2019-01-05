@@ -61,6 +61,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #include "TNC.h"
 #include "GPS.h"
 #include "TMP102.h"
+#include "CustomReports.cpp"
 
 #ifdef AT_COMBINED
   #include "BMP180.h"
