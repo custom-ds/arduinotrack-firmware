@@ -1,0 +1,29 @@
+{
+	"packages": [{
+		"name": "Project Traveler",
+		"maintainer": "Project Traveler",
+		"websiteURL": "https://www.projecttraveler.org",
+		"email": "zack@custom-ds.com",
+		"help": {
+			"online": "https://www.projecttraveler.org"
+		},
+		"platforms": [{
+			"name": "ArduinoTrack",
+			"architecture": "avr",
+			"version": "1.0.0",
+			"category": "Contributed",
+			"url": "https://www.projecttraveler.org/downloads/arduinotrackboards-1.0.0.zip",
+			"archiveFileName": "arduinotrackboards-1.0.0.zip",
+			"checksum": "SHA-256:70ccbb68fbdd2bd63eee6d69ef8ae77003923850d7af490623b364d40d2dab6d",
+			"size": "2485",
+			"help": {
+				"online": "https://www.projecttraveler.org"
+			},
+			"boards": [{
+				"name": "ArduinoTrack"
+			}],
+			"toolsDependencies": []
+		}],
+		"tools": [{}]
+	}]
+}

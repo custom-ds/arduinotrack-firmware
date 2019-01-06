@@ -1,4 +1,3 @@
-
 /*
 ArduinoTrack
 Copywrite 2011-2018 - Zack Clobes (W0ZC), Custom Digital Services, LLC
@@ -61,7 +60,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #include "TNC.h"
 #include "GPS.h"
 #include "TMP102.h"
-#include "CustomReports.cpp"
+#include "Custom.h"
 
 #ifdef AT_COMBINED
   #include "BMP180.h"
@@ -314,6 +313,7 @@ void setup() {
 
   getConfigFromEeprom();
 
+  customInit();   //Call any custom code to init sensors, initialize variables, etc.
 
   //Send out an initial packet announcing itself.
   oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, true);
@@ -340,7 +340,6 @@ void loop() {
 
 
   collectGPSStrings();      //listen to the GPS for up to 3 seconds (the function will exit out as soon as a pair of RMC and GGA strings are received)
-
 
 
   //Check to see if we've decoded a GPS packet recently.
@@ -463,6 +462,10 @@ void loop() {
     }
 
     break;
+  }
+
+  if (customLoop()) {
+    bXmit = true;   //allow the customLoop function to set an xmit flag true
   }
 
   if (bXmit) {
@@ -636,6 +639,8 @@ void sendPositionSingleLine() {
     oTNC.xmitLong((long)fTemp, true);
   }
 
+  customSendPositionSingleLine();     //Xmit any custom telemetry data
+  
   oTNC.xmitChar(' ');
   oTNC.xmitString(Config.StatusMessage);
 
@@ -1121,7 +1126,7 @@ void doConfigMode() {
           Serial.println(insideTemp);
         }
         
-        
+        customExercise();
         
         Serial.write(CONFIG_PROMPT);
       }

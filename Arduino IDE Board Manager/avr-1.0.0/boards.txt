@@ -1,0 +1,22 @@
+# ArduinoTrack Board Contribution Configuration
+#
+
+
+menu.cpu=Processor
+
+##############################################################
+trackshield.name=ArduinoTrack Shield
+
+trackshield.upload.tool=arduinoasisp
+trackshield.upload.protocol=stk500
+trackshield.upload.maximum_size=32768
+trackshield.upload.maximum_data_size=2048
+trackshield.upload.speed=19200
+
+
+trackshield.build.mcu=atmega328p
+trackshield.build.f_cpu=16000000L
+trackshield.build.board=AVR_TRACKSHIELD
+trackshield.build.core=arduino
+trackshield.build.variant=standard
+##############################################################
