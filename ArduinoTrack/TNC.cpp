@@ -22,7 +22,11 @@ Version 1.0.0 - January 15, 2015 - Finalized the basic configuration and license
 #include "TNC.h"
 
 TNC::TNC(void) {
-  _iSZLen = -1;
+  //keep track of some transmitter parameters
+  _transmitterType = 0;
+  _txDelay = 50;    //Default txDelay
+  
+  _iSZLen = -1;   //init the buffer
   
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -109,13 +113,14 @@ void TNC::xmitEnd(void) {
     _iTxState = 0;
     _iSZPos = 0;
     
-    _iTxDelayRemaining = TX_DELAY_LEN;
+    _iTxDelayRemaining = _txDelay;    //start off with a txDelay parameter
   
     _CRC = 0xFFFF;    //init the CRC variable
     
     digitalWrite(_pinPTT, HIGH);    //push the PTT
-    delay(250);			//FIX FOR DRA818V
-    
+    if (_transmitterType == 1) {
+      delay(250);			//FIX FOR DRA818V
+    }
     _startTimer1ISR();
   
     //wait for the state machine to get to a State 5, which is when it shuts down the transmitter.
@@ -397,4 +402,16 @@ void TNC::_startTimer1ISR(void){
 void TNC::_stopTimer1ISR(void) {
   cbi(TIMSK1, OCIE1A);
 }
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::setTransmitterType(char transmitterType) {
+  _transmitterType = transmitterType;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::setTxDelay(unsigned int txDelay) {
+  _txDelay = txDelay;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::setCourtesyTone(char courtesyTone) {
+  //NOT YET IMPLEMENTED!!!
+  _courtesyTone = courtesyTone;
+}

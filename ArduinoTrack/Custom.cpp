@@ -20,9 +20,14 @@ This file is intended to be modified by the end-user to accomidate any custom pr
 
 
 #include <Arduino.h>
-#include "SparkFun_AS7265X.h"
+#include "TNC.h"
+#include "TMP102.h"
+//include "SparkFun_AS7265X.h"
+
 /* Custom Global Variables */
-AS7265X sensor;
+TMP102 OAT;    //TMP102 sensor for outside air temp
+
+//AS7265X sensor;
 
 
 
@@ -33,7 +38,8 @@ AS7265X sensor;
  */
 void customInit() {
 //  Enviro.initialize();
-
+  Serial.println(F("Init'ing TMP102 sensor"));
+  OAT.begin();
 
 }
 
@@ -58,7 +64,7 @@ bool customLoop() {
  *  is transmitted.  Be aware that any custom output should be limited to roughly 50 characters max.
  *  
  */
-void customSendPositionSingleLine() {
+void customSendPositionSingleLine(bool transmitCustom, TNC& oTNC) {
 //  char szTemp[15];
 //  int iHumidity;
 //
@@ -67,7 +73,18 @@ void customSendPositionSingleLine() {
 //  oTNC.xmitString((char *)" Humidity=");
 //  sprintf(szTemp, "%03d", iHumidity);
 //  oTNC.xmitString(szTemp);
-  
+
+  if (!transmitCustom) return;    //we don't want to transmit anything custom here
+
+  double outsideTemp;    //outside air temp
+  char statusOAT = 0;
+  statusOAT = OAT.getTemperature(outsideTemp);
+
+
+    if (statusOAT != 0) {
+      oTNC.xmitString((char *)" OAT=");
+      oTNC.xmitFloat((float)outsideTemp);
+    }  
 }
 
 
@@ -84,6 +101,17 @@ void customExercise() {
 //  Serial.print(F("Humidity: "));
 //  Serial.println(percentHumidity);
 
+  double temp;
+  char status;
+  
+  Serial.print(F("OAT: "));
+  status = OAT.getTemperature(temp);
+  if (status == 0) {
+    Serial.println("n/a");
+  } else {
+    Serial.println(temp);
+  }
+/*
   sensor.takeMeasurements(); //This is a hard wait while all 18 channels are measured
 
   Serial.print(sensor.getCalibratedA());
@@ -106,4 +134,5 @@ void customExercise() {
   Serial.print(sensor.getCalibratedU());
   Serial.print(sensor.getCalibratedV());
   Serial.print(sensor.getCalibratedW());  
+  */
 }

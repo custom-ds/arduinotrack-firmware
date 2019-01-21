@@ -7,7 +7,7 @@
 
 void customInit();
 bool customLoop();
-void customSendPositionSingleLine();
+void customSendPositionSingleLine(bool transmitCustom, TNC& oTNC);
 void customExercise();
 
 #endif

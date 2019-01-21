@@ -40,7 +40,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 
 
 #define FIRMWARE_VERSION "3.1.2"
-#define CONFIG_VERSION "PT0002"
+#define CONFIG_VERSION "PT0003"
 #define CONFIG_PROMPT "\n# "
 
 
@@ -59,7 +59,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #include <EEPROM.h>
 #include "TNC.h"
 #include "GPS.h"
-#include "TMP102.h"
+
 #include "Custom.h"
 
 #ifdef AT_COMBINED
@@ -143,6 +143,13 @@ struct udtConfig {
   bool StatusXmitTemp;
   bool StatusXmitPressure;
 
+  bool StatusXmitCustom;
+  byte RadioType;
+  unsigned int RadioTxDelay;
+  bool RadioCourtesyTone;
+  char RadioFreqTx[9];
+  char RadioFreqRx[9];
+
   unsigned int CheckSum;    //sum of the callsign element.  If it doesn't match, then it reinitializes the EEPROM
 };
 udtConfig Config;
@@ -162,7 +169,6 @@ float fMaxAlt;
 #ifdef AT_FLEX
   BME280 Pressure;      //BMP280 pressure/temp sensor
 #endif
-TMP102 OAT;    //TMP102 sensor for outside air temp
 
 
 #if defined(AT_COMBINED) || defined(AT_FLEX)
@@ -295,8 +301,7 @@ void setup() {
 #endif  
 
   
-  Serial.println(F("Init'ing TMP102 sensor"));
-  OAT.begin();
+
 
   //Check to see if we're going into config mode
   byte byTemp;
@@ -312,6 +317,9 @@ void setup() {
   }
 
   getConfigFromEeprom();
+  oTNC.setTransmitterType(Config.RadioType);
+  oTNC.setTxDelay(Config.RadioTxDelay);
+  oTNC.setCourtesyTone(Config.RadioCourtesyTone);
 
   customInit();   //Call any custom code to init sensors, initialize variables, etc.
 
@@ -488,12 +496,12 @@ void sendPositionSingleLine() {
   char szTemp[15];    //largest string held should be the longitude
   int i;
   double insideTemp;    //inside air temp
-  double outsideTemp;    //outside air temp
+  
   double airPressure;    //millibars
   float fTemp;    //temporary variable
 
   char statusIAT = 0;
-  char statusOAT = 0;
+  
   
   
   if (Config.StatusXmitPressure || Config.StatusXmitTemp) {
@@ -527,7 +535,7 @@ void sendPositionSingleLine() {
         airPressure = 0.0;
       }
     }
-    statusOAT = OAT.getTemperature(outsideTemp);
+    
 
 #endif
 #ifdef AT_FLEX
@@ -535,8 +543,6 @@ void sendPositionSingleLine() {
   airPressure = airPressure / 100;    //convert back to simple airpressure in hPa
   insideTemp = (double)Pressure.readTempC();
   //insideTemp = insideTemp / 100;    //convert back to decimal
-
-  statusOAT = OAT.getTemperature(outsideTemp);
 #endif
 
   }
@@ -621,11 +627,6 @@ void sendPositionSingleLine() {
   if (Config.StatusXmitTemp) {
     oTNC.xmitString((char *)" IAT=");
     oTNC.xmitFloat((float)insideTemp);
-  
-    if (statusOAT != 0) {
-      oTNC.xmitString((char *)" OAT=");
-      oTNC.xmitFloat((float)outsideTemp);
-    }
   }
 
   if (Config.StatusXmitPressure) {
@@ -639,7 +640,7 @@ void sendPositionSingleLine() {
     oTNC.xmitLong((long)fTemp, true);
   }
 
-  customSendPositionSingleLine();     //Xmit any custom telemetry data
+  customSendPositionSingleLine(Config.StatusXmitCustom, oTNC);     //Xmit any custom telemetry data
   
   oTNC.xmitChar(' ');
   oTNC.xmitString(Config.StatusMessage);
@@ -943,10 +944,20 @@ void setDefaultConfig() {
   Config.StatusXmitBatteryVoltage = 1;
   Config.StatusXmitTemp = 1;
   Config.StatusXmitPressure = 1;
+	Config.StatusXmitCustom;
+	
+	Config.RadioType = 0;
+	Config.RadioTxDelay = 50;
+	Config.RadioCourtesyTone = 0;
+  strcpy(Config.RadioFreqTx, "144.3900");
+	strcpy(Config.RadioFreqRx, "144.3900");
+
   Config.GPSSerialBaud = 5;    //1=300, 2=1200, 3=2400, 4=4800, 5=9600, 6=19200
   Config.GPSSerialInvert = 0;    //Invert the incoming signal
   Config.GPSType = 1;      //0=Generic NMEA, 1=UBlox
   Config.AnnounceMode = 1;
+
+
 
   Config.CheckSum = 410;		//Checksum for N0CALL
 
@@ -1115,17 +1126,6 @@ void doConfigMode() {
         Serial.print(F("Pressure: "));
         Serial.println(airPressure);   
         
-        //Read external temp
-        insideTemp = 0.0;
-        
-        Serial.print(F("OAT: "));
-        status = OAT.getTemperature(insideTemp);
-        if (status == 0) {
-          Serial.println("n/a");
-        } else {
-          Serial.println(insideTemp);
-        }
-        
         customExercise();
         
         Serial.write(CONFIG_PROMPT);
@@ -1148,13 +1148,10 @@ void readConfigParam(char *szParam, int iMaxLen) {
 
     if (Serial.available()) {
       c = Serial.read();
-      //Serial.write(c);    //echo it back out
 
       if (c == 0x09 || c == 0x04) {
         //this is the end of a data set
 
-        //Serial.println("::");
-        //Serial.println(szParam);
         return;
       }
       if (iSize < iMaxLen) {
@@ -1296,6 +1293,29 @@ bool getConfigFromPC() {
       Config.StatusXmitPressure = szParam[0] == '1';
 
       readConfigParam(szParam, sizeof(szParam));
+      Config.StatusXmitCustom = szParam[0] == '1';
+
+			
+			//Radio Configuration
+      readConfigParam(szParam, sizeof(szParam));
+      Config.RadioType = atoi(szParam);    //0=Standard Tx-only, 1=DRA818V
+
+      readConfigParam(szParam, sizeof(szParam));
+      Config.RadioTxDelay = atoi(szParam);
+
+      readConfigParam(szParam, sizeof(szParam));
+      Config.RadioCourtesyTone = atoi(szParam);    //0=off, 1=on
+
+      readConfigParam(szParam, sizeof(Config.RadioFreqTx));    //Transmit Frequency for DRA818
+      strcpy(Config.RadioFreqTx, szParam);
+      
+      readConfigParam(szParam, sizeof(Config.RadioFreqRx));    //Receive Frequency for DRA818
+      strcpy(Config.RadioFreqRx, szParam);
+      
+
+
+			//GPS Configuration
+      readConfigParam(szParam, sizeof(szParam));
       Config.GPSSerialBaud = atoi(szParam);    //1=300, 2=1200, 3=2400, 4=4800, 5=9600, 6=19200
 
       readConfigParam(szParam, sizeof(szParam));
@@ -1303,6 +1323,7 @@ bool getConfigFromPC() {
 
       readConfigParam(szParam, sizeof(szParam));
       Config.GPSType = atoi(szParam);        //0=Generic NMEA, 1=Ublox
+
 
       //Annunciator Type
       readConfigParam(szParam, sizeof(szParam));
@@ -1417,6 +1438,27 @@ void sendConfigToPC() {
         else Serial.write("0");
         Serial.write(0x09);
 
+        if (Config.StatusXmitCustom) Serial.write("1");
+        else Serial.write("0");
+        Serial.write(0x09);
+
+        //Radio Parameters
+        Serial.print(Config.RadioType, DEC);      //0=Standard, 1=DRA818
+        Serial.write(0x09);
+        
+        Serial.print(Config.RadioTxDelay, DEC);
+        Serial.write(0x09);
+        
+        if (Config.RadioCourtesyTone) Serial.write("1");
+        else Serial.write("0");
+        Serial.write(0x09);               
+
+        Serial.write(Config.RadioFreqTx);
+        Serial.write(0x09);
+
+        Serial.write(Config.RadioFreqRx);
+        Serial.write(0x09);
+        
         //GPS Serial Data
         Serial.print(Config.GPSSerialBaud, DEC);      //1=300, 2=1200, 3=2400, 4=4800, 5=9600, 6=19200
         Serial.write(0x09);

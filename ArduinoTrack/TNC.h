@@ -32,8 +32,7 @@ You should have received a copy of the GNU General Public License along with Ard
 
 // 16MHz / 666 = 24.024kHz.  24kHz / 20 / 1201Hz baud
 #define TIMER1_SEED 666
-//Original TX_Delay_len = 50
-#define TX_DELAY_LEN 100
+
 
 #define MAX_SZXMIT_SIZE 200
 
@@ -52,6 +51,10 @@ class TNC {
     boolean noBitStuffing(void);
     int xmitLen(void);
     void xmitFlush(void);
+
+    void setTransmitterType(char transmitterType);
+    void setTxDelay(unsigned int txDelay);
+    void setCourtesyTone(char courtesyTone);
   private:
     void _calcCRC(byte iBit);
     boolean _getNextBit(void);
@@ -67,16 +70,19 @@ class TNC {
     int _pinRx;
     int _pinPTT;
 
+    char _transmitterType;
+    unsigned int _txDelay;
+    char _courtesyTone;
 
-byte _iSZPos = 0;    //Tracks the current byte being modulated out of the modem
-int _iTxDelayRemaining = 0;
-boolean _bNoStuffing = false;
-unsigned int _CRC;
-byte _iTxState = 0;
+
+    byte _iSZPos = 0;    //Tracks the current byte being modulated out of the modem
+    int _iTxDelayRemaining = 0;
+    boolean _bNoStuffing = false;
+    unsigned int _CRC;
+    byte _iTxState = 0;
 
   
 };
 
 
 #endif
-
