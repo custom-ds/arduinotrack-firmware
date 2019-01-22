@@ -1,6 +1,6 @@
 /*
-ArduinoTrack
-Copywrite 2011-2018 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+Project: Traveler Arduino-based APRS Tracker Firmware
+Copywrite 2011-2019 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
@@ -32,14 +32,14 @@ Version 3.0.0 - April 23, 2016 - Merged the ArduinoTrack and ArduinoTrack codeba
 Version history prior to 3.0 has been moved into the core readme.txt file...
 */
 
-// Uncomment one of the following three lines, depending on how you are programming your ArduinoTrack.  Combined is the single board AT that does everything.  AT_MODEM 
-//  is an ArduinoTrack that is configured just to be a modem.  AT_FLEX is the newer style board, known as the "Flex" board.
+// Uncomment one of the following three lines, depending on how you are programming your tracker.  Combined is the single board AT that does everything.  AT_MODEM 
+//  is an ArduinoTrack that is configured just to be a modem.  AT_FLEX is the newer style board, known as the "ptFlex" board.
 //define AT_COMBINED
 //define AT_MODEM
 #define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.1.2"
+#define FIRMWARE_VERSION "3.9.0"
 #define CONFIG_VERSION "PT0003"
 #define CONFIG_PROMPT "\n# "
 
@@ -78,8 +78,8 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 
 #define PIN_GPS_TX 7
 #define PIN_GPS_RX 8
-#define PIN_DRA_TX 10
-#define PIN_DRA_RX 9
+#define PIN_DRA_TX 9
+#define PIN_DRA_RX 10
 #define PIN_DRA_EN 4
 
 //PIN_TNC's are used for the split Arduino/Arduino_modem units.  Can be ignored for Combined mode
@@ -258,16 +258,12 @@ void setup() {
 	pinMode(PIN_PTT_OUT, OUTPUT);
   pinMode(PIN_AUDIO_OUT, OUTPUT);
 
-  Serial.println(F("ArduinoTrack_Combined Flight Computer"));
+  Serial.println(F("Project: Traveler (Combined) Flight Computer"));
 #else
 	//Define as an external KISS-type of TNC (i.e. the ArduinoTrack Modem)
 	oTNC.initKISS(PIN_TNC_RX, PIN_TNC_TX);
 
-	Serial.println(F("ArduinoTrack Flight Computer"));
-#endif
-
-#ifdef AT_FLEX
-  initDRA818();
+	Serial.println(F("Project: Traveler Flight Computer"));
 #endif
 
   Serial.print(F("Firmware Version: "));
@@ -317,6 +313,12 @@ void setup() {
   }
 
   getConfigFromEeprom();
+
+  if (Config.RadioType == 1) {
+    //this is DRA818
+    initDRA818();
+  }
+  
   oTNC.setTransmitterType(Config.RadioType);
   oTNC.setTxDelay(Config.RadioTxDelay);
   oTNC.setCourtesyTone(Config.RadioCourtesyTone);
@@ -325,7 +327,7 @@ void setup() {
 
   //Send out an initial packet announcing itself.
   oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, true);
-  oTNC.xmitString((char *)">Project Traveler ArduinoTrack Controller v");
+  oTNC.xmitString((char *)">Project Traveler Flight Computer v");
   oTNC.xmitString((char *)FIRMWARE_VERSION);
   oTNC.xmitString((char *)" Initializing...");
   oTNC.xmitEnd();
@@ -808,8 +810,14 @@ void initDRA818(void) {
   DRA.print("AT+DMOCONNECT\r\n");
   Serial.println(F("  connected"));
   delay(250);
-  DRA.print("AT+DMOSETGROUP=0,144.3900,144.3900,0000,4,0000\r\n");
-  Serial.println(F("   Set to 144.39"));
+  DRA.print("AT+DMOSETGROUP=0,");
+  DRA.print(Config.RadioFreqTx);
+  DRA.print(",");
+  DRA.print(Config.RadioFreqRx);
+  DRA.print(",0000,4,0000\r\n");
+
+  Serial.print(F("   Set to "));
+  Serial.println(Config.RadioFreqTx);
   delay(1000);      //wait for transmitter to change frequency
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -917,11 +925,11 @@ void setDefaultConfig() {
   Config.CallsignSSID = '0';
   strcpy(Config.Destination, "APRS  ");
   Config.DestinationSSID = '0';
-  strcpy(Config.Path1, "      ");
-  Config.Path1SSID = '0';
+  strcpy(Config.Path1, "WIDE2 ");
+  Config.Path1SSID = '1;
   strcpy(Config.Path2, "      ");
   Config.Path2SSID = '0';
-  Config.DisablePathAboveAltitude = 0;
+  Config.DisablePathAboveAltitude = 2000;
   Config.Symbol = 'O';    //letter O for balloons
   Config.SymbolPage = '/';
   Config.BeaconType = 0;
@@ -938,7 +946,7 @@ void setDefaultConfig() {
   Config.BeaconAltitudeDelayHigh = 45;
   Config.BeaconSlot1 = 15;
   Config.BeaconSlot2 = 45;
-  strcpy(Config.StatusMessage, "ArduinoTrack");
+  strcpy(Config.StatusMessage, "Project Traveler Tracker");
   Config.StatusXmitGPSFix = 1;
   Config.StatusXmitBurstAltitude = 1;
   Config.StatusXmitBatteryVoltage = 1;
@@ -973,7 +981,7 @@ void writeConfigToEeprom() {
 void doConfigMode() {
   byte byTemp;
 
-  Serial.println(F("ArduinoTrack Flight Computer"));
+  Serial.println(F("Project: Traveler Flight Computer"));
   Serial.print(F("Firmware Version: "));
   Serial.print((char *)FIRMWARE_VERSION);
   Serial.print(F("   Config Version: "));
@@ -988,7 +996,7 @@ void doConfigMode() {
       byTemp = Serial.read();
 
       if (byTemp == '!') {
-        Serial.println(F("ArduinoTrack Flight Computer"));
+        Serial.println(F("Project: Traveler Flight Computer"));
         Serial.print(F("Firmware Version: "));
         Serial.print((char *)FIRMWARE_VERSION);
         Serial.print(F("   Config Version: "));
@@ -1025,7 +1033,7 @@ void doConfigMode() {
       }
       
       if (byTemp == 'D') {
-        //used to reset the ArduinoTrack back to N0CALL defaults
+        //used to reset the tracker back to N0CALL defaults
         Serial.println(F("Resetting to defaults (N0CALL)"));
         setDefaultConfig();        
         annunciate('w');
@@ -1035,7 +1043,7 @@ void doConfigMode() {
       if (byTemp == 'E') {
         //exercise mode to check out all of the I/O ports
         
-        Serial.println(F("Exercising the ArduinoTrack"));
+        Serial.println(F("Exercising the tracker"));
         
         Serial.println(F("Testing annunciators"));
         Config.AnnounceMode = 0x03;    //temporarily set the announce mode to both
