@@ -39,7 +39,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.9.0"
+#define FIRMWARE_VERSION "3.9.1"
 #define CONFIG_VERSION "PT0003"
 #define CONFIG_PROMPT "\n# "
 
@@ -474,7 +474,7 @@ void loop() {
     break;
   }
 
-  if (customLoop()) {
+  if (customLoop(GPSParser)) {
     bXmit = true;   //allow the customLoop function to set an xmit flag true
   }
 
@@ -622,7 +622,7 @@ void sendPositionSingleLine() {
     fVolts = fVolts * 3.141;        //times (147/100) to adjust for the resistor divider
     fVolts = fVolts + 0.19;      //account for the inline diode on the power supply
 
-    oTNC.xmitString((char *)" Batt=");
+    oTNC.xmitString((char *)" Vb=");
     oTNC.xmitFloat(fVolts);
   }
 
@@ -642,7 +642,7 @@ void sendPositionSingleLine() {
     oTNC.xmitLong((long)fTemp, true);
   }
 
-  customSendPositionSingleLine(Config.StatusXmitCustom, oTNC);     //Xmit any custom telemetry data
+  customSendPositionSingleLine(Config.StatusXmitCustom, oTNC, GPSParser);     //Xmit any custom telemetry data
   
   oTNC.xmitChar(' ');
   oTNC.xmitString(Config.StatusMessage);
@@ -807,14 +807,14 @@ void initDRA818(void) {
   Serial.println(F("Init DRA Transmitter"));
   SoftwareSerial DRA(PIN_DRA_RX, PIN_DRA_TX, false);    //A True at the end indicates that the serial data is inverted.
   DRA.begin(9600);
-  DRA.print("AT+DMOCONNECT\r\n");
+  DRA.print(F("AT+DMOCONNECT\r\n"));
   Serial.println(F("  connected"));
   delay(250);
-  DRA.print("AT+DMOSETGROUP=0,");
+  DRA.print(F("AT+DMOSETGROUP=0,"));
   DRA.print(Config.RadioFreqTx);
   DRA.print(",");
   DRA.print(Config.RadioFreqRx);
-  DRA.print(",0000,4,0000\r\n");
+  DRA.print(F(",0000,4,0000\r\n"));
 
   Serial.print(F("   Set to "));
   Serial.println(Config.RadioFreqTx);
@@ -836,7 +836,7 @@ bool ubloxSendUBX() {
   SoftwareSerial GPS(PIN_GPS_RX, PIN_GPS_TX, Config.GPSSerialInvert);    //A True at the end indicates that the serial data is inverted.
   GPS.begin(9600);
 
-
+  
   byte setdm6[] = {0xB5, 0x62, 0x06, 0x24, 0x24, 0x00, 0xFF, 0xFF, 0x06, 0x03, 0x00, 0x00, 0x00, 0x00, 0x10, 0x27, 0x00, 0x00,
                    0x05, 0x00, 0xFA, 0x00, 0xFA, 0x00, 0x64, 0x00, 0x2C, 0x01, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00,
                    0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x16, 0xDC };
@@ -926,7 +926,7 @@ void setDefaultConfig() {
   strcpy(Config.Destination, "APRS  ");
   Config.DestinationSSID = '0';
   strcpy(Config.Path1, "WIDE2 ");
-  Config.Path1SSID = '1;
+  Config.Path1SSID = '1';
   strcpy(Config.Path2, "      ");
   Config.Path2SSID = '0';
   Config.DisablePathAboveAltitude = 2000;
