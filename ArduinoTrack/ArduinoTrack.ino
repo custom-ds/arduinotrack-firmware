@@ -1,6 +1,6 @@
 /*
 ArduinoTrack
-Copywrite 2011-2018 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+Copywrite 2011-2019 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
 
 This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
@@ -15,6 +15,7 @@ ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
+Version 3.1.3 - February 23, 2019 - Added extra outputs to the Exercise Mode
 Version 3.1.2 - December 24, 2018 - Important Bug fixes!
       * Fixed issue in GPS.cpp for E/S hemispheres (thanks Micha Schroeder, DC1MAK)
       * Fixed issue in TNC.cpp for formatting numbers above 100 (thanks Mark Conner, N9XTN)
@@ -39,7 +40,7 @@ Version history prior to 3.0 has been moved into the core readme.md file...
 //define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.1.2"
+#define FIRMWARE_VERSION "3.1.3"
 #define CONFIG_VERSION "PT0002"
 #define CONFIG_PROMPT "\n# "
 
@@ -996,6 +997,11 @@ void doConfigMode() {
         //exercise mode to check out all of the I/O ports
         
         Serial.println(F("Exercising the ArduinoTrack"));
+        Serial.print(F("Firmware Version: "));
+        Serial.println(FIRMWARE_VERSION);
+
+        Serial.print(F("Config Version: "));
+        Serial.println(CONFIG_VERSION);
         
         Serial.println(F("Testing annunciators"));
         Config.AnnounceMode = 0x03;    //temporarily set the announce mode to both
@@ -1085,6 +1091,16 @@ void doConfigMode() {
         Serial.println(insideTemp);
         Serial.print(F("Pressure: "));
         Serial.println(airPressure);   
+
+        //Read in the battery Voltage
+        int iBattery = analogRead(PIN_ANALOG_BATTERY);
+        float fVolts = (float)iBattery / 204.8;    //204.8 points per volt,
+        fVolts = fVolts * 3.141;        //times (147/100) to adjust for the resistor divider
+        fVolts = fVolts + 0.19;      //account for the inline diode on the power supply
+
+        Serial.print(F("Battery: "));
+        Serial.println(fVolts);
+
         
         //Read external temp
         insideTemp = 0.0;
