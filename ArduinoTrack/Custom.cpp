@@ -133,51 +133,65 @@ void customSendPositionSingleLine(bool transmitCustom, TNC& oTNC, GPS& GPSParser
 
 #ifdef _SPARKFUN_AS7265X_H
   char szTemp[10];
+  static uint8_t cycle=0;
+  
   //Light Readings from the AS7265x sensors
   if (LightSensor.isConnected()) {
-    oTNC.xmitString((char *)" L=");
+
     LightSensor.takeMeasurements(); //This is a hard wait while all 18 channels are measured
-  
-    sprintf(szTemp, "%04X", LightSensor.getA());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getB());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getC());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getD());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getE());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getF());
-    oTNC.xmitString(szTemp);
-    oTNC.xmitChar('-');
-  
-    sprintf(szTemp, "%04X", LightSensor.getG());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getH());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getI());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getJ());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getK());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getL());
-    oTNC.xmitString(szTemp);
-    oTNC.xmitChar('-');
-  
-    sprintf(szTemp, "%04X", LightSensor.getR());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getS());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getT());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getU());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getV());
-    oTNC.xmitString(szTemp);
-    sprintf(szTemp, "%04X", LightSensor.getW());
-    oTNC.xmitString(szTemp);
+    
+    switch (cycle) {
+      case 0:
+        oTNC.xmitString((char *)" Lu=");
+        sprintf(szTemp, "%04X", LightSensor.getA());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getB());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getC());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getD());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getE());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getF());
+        oTNC.xmitString(szTemp);
+        cycle = 1;
+        break;
+      case 1:
+        oTNC.xmitString((char *)" Lv=");
+        sprintf(szTemp, "%04X", LightSensor.getG());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getH());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getI());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getJ());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getK());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getL());
+        oTNC.xmitString(szTemp);
+        cycle = 2;
+        break;
+      case 2:
+        oTNC.xmitString((char *)" Li=");
+        sprintf(szTemp, "%04X", LightSensor.getR());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getS());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getT());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getU());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getV());
+        oTNC.xmitString(szTemp);
+        sprintf(szTemp, "%04X", LightSensor.getW());
+        oTNC.xmitString(szTemp);
+        cycle = 0;
+        break;
+      default:
+        cycle = 0;
+    }
   }
 #endif
     
