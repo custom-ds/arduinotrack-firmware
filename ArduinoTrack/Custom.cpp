@@ -25,8 +25,8 @@ This file is intended to be modified by the end-user to accomidate any custom pr
 
 
 //include "TMP102.h"
-#include "SparkFun_AS7265X.h"
-//include "SparkFun_SHTC3.h"
+//include "SparkFun_AS7265X.h"
+#include "SparkFun_SHTC3.h"
 
 /* Custom Global Variables */
 #ifdef TMP102_h
