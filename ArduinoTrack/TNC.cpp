@@ -266,6 +266,7 @@ void TNC::_calcCRC(byte iBit) {
   }
   return;
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 boolean TNC::getNextBit(void) {
   static int iRotatePos = 0;
@@ -414,4 +415,9 @@ void TNC::setTxDelay(unsigned int txDelay) {
 void TNC::setCourtesyTone(char courtesyTone) {
   //NOT YET IMPLEMENTED!!!
   _courtesyTone = courtesyTone;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::keyTransmitter(bool transmit) {
+  //Keys up or shuts down the transmitter.  Used for testing
+  digitalWrite(_pinPTT, transmit);    //Unkey the transmitter
 }

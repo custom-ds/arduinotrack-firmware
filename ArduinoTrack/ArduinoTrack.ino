@@ -39,7 +39,7 @@ Version history prior to 3.0 has been moved into the core readme.txt file...
 #define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.9.1"
+#define FIRMWARE_VERSION "3.9.2"
 #define CONFIG_VERSION "PT0003"
 #define CONFIG_PROMPT "\n# "
 
@@ -257,14 +257,11 @@ void setup() {
 
 	pinMode(PIN_PTT_OUT, OUTPUT);
   pinMode(PIN_AUDIO_OUT, OUTPUT);
-
-  Serial.println(F("Project: Traveler (Combined) Flight Computer"));
 #else
 	//Define as an external KISS-type of TNC (i.e. the ArduinoTrack Modem)
 	oTNC.initKISS(PIN_TNC_RX, PIN_TNC_TX);
-
-	Serial.println(F("Project: Traveler Flight Computer"));
 #endif
+  Serial.println(F("pt Flight Computer"));
 
   Serial.print(F("Firmware Version: "));
   Serial.println(FIRMWARE_VERSION);
@@ -282,13 +279,13 @@ void setup() {
 
   //init the I2C devices
 #ifdef AT_COMBINED
-  Serial.println(F("Init'ing BMP180 sensor"));
+  Serial.println(F("Init BMP180"));
   if (!Pressure.begin()) {
     Serial.println(F(" Could NOT init!"));
   }
 #endif
 #ifdef AT_FLEX
-  Serial.println(F("Init'ing BME280 sensor"));
+  Serial.println(F("Init BME280"));
   Pressure.setI2CAddress(0x76);
   if (Pressure.beginI2C() == false) //Begin communication over I2C
   {
@@ -753,6 +750,10 @@ void annunciate(char c) {
     delay(DELAY_GAP);
     audioTone(DELAY_DIT);
     break;
+  case 't':
+    //Exercising and testing the Transmitter
+    audioTone(DELAY_DAH);
+    break;
   case 'w':
     //Indicates that configuration settings were written to EEPROM
     audioTone(DELAY_DIT);
@@ -804,7 +805,7 @@ void initDRA818(void) {
 
   digitalWrite(PIN_DRA_EN, HIGH);
   
-  Serial.println(F("Init DRA Transmitter"));
+  Serial.println(F("Init DRA818"));
   SoftwareSerial DRA(PIN_DRA_RX, PIN_DRA_TX, false);    //A True at the end indicates that the serial data is inverted.
   DRA.begin(9600);
   DRA.print(F("AT+DMOCONNECT\r\n"));
@@ -816,9 +817,14 @@ void initDRA818(void) {
   DRA.print(Config.RadioFreqRx);
   DRA.print(F(",0000,4,0000\r\n"));
 
-  Serial.print(F("   Set to "));
+  Serial.print(F(" Freq: "));
   Serial.println(Config.RadioFreqTx);
   delay(1000);      //wait for transmitter to change frequency
+
+  //Cycle the transmitter quickly.  It seems to take a long time to transmit the first time after inint
+  oTNC.keyTransmitter(true);
+  delay(250);   //not even long enough to actually key up...
+  oTNC.keyTransmitter(false);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initUblox(void) {
@@ -908,11 +914,10 @@ void getConfigFromEeprom() {
   }
 
   Serial.println(F("Read EEPROM"));
-  Serial.print(F("Callsign: "));
   Serial.println(Config.Callsign);
 
   if (iCheckSum != Config.CheckSum) {
-    Serial.println(F("Checksums don't match.  Resetting to defaults."));
+    Serial.println(F("Checksum fail. Resetting."));
 
     //we do NOT have a match - reset the Config variables
     setDefaultConfig();
@@ -981,7 +986,7 @@ void writeConfigToEeprom() {
 void doConfigMode() {
   byte byTemp;
 
-  Serial.println(F("Project: Traveler Flight Computer"));
+  Serial.println(F("pt Flight Computer"));
   Serial.print(F("Firmware Version: "));
   Serial.print((char *)FIRMWARE_VERSION);
   Serial.print(F("   Config Version: "));
@@ -996,20 +1001,17 @@ void doConfigMode() {
       byTemp = Serial.read();
 
       if (byTemp == '!') {
-        Serial.println(F("Project: Traveler Flight Computer"));
+        Serial.println(F("pt Flight Computer"));
         Serial.print(F("Firmware Version: "));
         Serial.print((char *)FIRMWARE_VERSION);
         Serial.print(F("   Config Version: "));
         Serial.println(CONFIG_VERSION);
-        Serial.print(CONFIG_PROMPT);
       }
 
 
       if (byTemp == 'R') {
         getConfigFromEeprom();    //pull the configs from eeprom
         sendConfigToPC();
-
-        Serial.write(CONFIG_PROMPT);
       }
 
       if (byTemp == 'W') {
@@ -1028,43 +1030,50 @@ void doConfigMode() {
           //something failed during the read of the config data
           Serial.println(F("Failure to read in configuration data..."));
         }
-
-        Serial.write(CONFIG_PROMPT);
       }
       
       if (byTemp == 'D') {
         //used to reset the tracker back to N0CALL defaults
-        Serial.println(F("Resetting to defaults (N0CALL)"));
+        Serial.println(F("Reset defaults"));
         setDefaultConfig();        
         annunciate('w');
-        Serial.write(CONFIG_PROMPT);
+      }
+
+      if (byTemp == 'T') {
+        //exercise the transmitter
+        Serial.println(F("Test Transmit"));
+        
+        annunciate('t');
+        oTNC.keyTransmitter(true);
+        delay(5000);
+        oTNC.keyTransmitter(false);
       }
       
       if (byTemp == 'E') {
         //exercise mode to check out all of the I/O ports
         
-        Serial.println(F("Exercising the tracker"));
+        Serial.println(F("Exercise"));
         
-        Serial.println(F("Testing annunciators"));
+        Serial.println(F(" annun"));
         Config.AnnounceMode = 0x03;    //temporarily set the announce mode to both
         annunciate('x');
         
         //check the IO pins
-        Serial.println(F("Pin 4"));
+        Serial.println(F(" pin 4"));
         pinMode(4, OUTPUT);
         digitalWrite(4, HIGH);
         delay(1000);
         digitalWrite(4, LOW);
         pinMode(4, INPUT);
 
-        Serial.println(F("Pin 6"));
+        Serial.println(F(" pin 6"));
         pinMode(6, OUTPUT);
         digitalWrite(6, HIGH);
         delay(1000);
         digitalWrite(6, LOW);
         pinMode(6, INPUT);        
         
-        Serial.println(F("Pin 10"));
+        Serial.println(F(" pin 10"));
         pinMode(10, OUTPUT);
         digitalWrite(10, HIGH);
         delay(1000);
@@ -1072,7 +1081,7 @@ void doConfigMode() {
         pinMode(10, INPUT);  
 
         //Analog A2
-        Serial.println(F("Pin A2"));
+        Serial.println(F(" pin A2"));
         pinMode(16, OUTPUT);
         digitalWrite(16, HIGH);
         delay(1000);
@@ -1080,7 +1089,7 @@ void doConfigMode() {
         pinMode(16, INPUT);          
         
          //Analog A3
-        Serial.println(F("Pin A3"));
+        Serial.println(F(" pin A3"));
         pinMode(17, OUTPUT);
         digitalWrite(17, HIGH);
         delay(1000);
@@ -1131,13 +1140,13 @@ void doConfigMode() {
 #endif
         Serial.print(F("IAT: "));
         Serial.println(insideTemp);
-        Serial.print(F("Pressure: "));
+        Serial.print(F("Press: "));
         Serial.println(airPressure);   
         
         customExercise();
-        
-        Serial.write(CONFIG_PROMPT);
       }
+
+      Serial.print(CONFIG_PROMPT);
     }
   }
   Serial.println(F("Exiting config mode..."));

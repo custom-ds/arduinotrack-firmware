@@ -55,6 +55,7 @@ class TNC {
     void setTransmitterType(char transmitterType);
     void setTxDelay(unsigned int txDelay);
     void setCourtesyTone(char courtesyTone);
+    void keyTransmitter(bool transmit);
   private:
     void _calcCRC(byte iBit);
     boolean _getNextBit(void);
