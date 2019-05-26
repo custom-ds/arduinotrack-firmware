@@ -154,7 +154,7 @@ void TNC::xmitString(char *sz) {
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void TNC::xmitChar(char c) {
-  if (_iSZLen < (MAX_SZXMIT_SIZE - 1)) {
+  if (_iSZLen < (MAX_SZXMIT_SIZE - 2)) {
     //we still have room in the array
     _szXmit[++_iSZLen] = c;
     _szXmit[_iSZLen + 1] = '\0';    //null terminate

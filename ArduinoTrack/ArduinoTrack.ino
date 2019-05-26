@@ -311,14 +311,16 @@ void setup() {
 
   getConfigFromEeprom();
 
-  if (Config.RadioType == 1) {
-    //this is DRA818
-    initDRA818();
-  }
   
   oTNC.setTransmitterType(Config.RadioType);
   oTNC.setTxDelay(Config.RadioTxDelay);
   oTNC.setCourtesyTone(Config.RadioCourtesyTone);
+
+
+  if (Config.RadioType == 1) {
+    //this is DRA818
+    initDRA818();
+  }
 
   customInit();   //Call any custom code to init sensors, initialize variables, etc.
 
@@ -825,6 +827,7 @@ void initDRA818(void) {
   oTNC.keyTransmitter(true);
   delay(250);   //not even long enough to actually key up...
   oTNC.keyTransmitter(false);
+  delay(500);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void initUblox(void) {
@@ -1042,6 +1045,15 @@ void doConfigMode() {
       if (byTemp == 'T') {
         //exercise the transmitter
         Serial.println(F("Test Transmit"));
+
+        oTNC.setTransmitterType(Config.RadioType);
+        oTNC.setTxDelay(Config.RadioTxDelay);
+        oTNC.setCourtesyTone(Config.RadioCourtesyTone);
+    
+        if (Config.RadioType == 1) {
+          //this is DRA818
+          initDRA818();
+        }
         
         annunciate('t');
         oTNC.keyTransmitter(true);
