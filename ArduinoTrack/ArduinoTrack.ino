@@ -15,6 +15,7 @@ ArduinoTrack is a trademark of Custom Digital Services, LLC.
 
 
 Version History:
+Version 3.1.4 - May 26, 2019 - Fixed potential buffer overflow issue in TNC.cpp.
 Version 3.1.3 - February 23, 2019 - Added extra outputs to the Exercise Mode
 Version 3.1.2 - December 24, 2018 - Important Bug fixes!
       * Fixed issue in GPS.cpp for E/S hemispheres (thanks Micha Schroeder, DC1MAK)
@@ -34,13 +35,12 @@ Version history prior to 3.0 has been moved into the core readme.md file...
 */
 
 // Uncomment one of the following three lines, depending on how you are programming your ArduinoTrack.  Combined is the single board AT that does everything.  AT_MODEM 
-//  is an ArduinoTrack that is configured just to be a modem.  AT_FLEX is the newer style board, known as the "Flex" board.
+//  is an ArduinoTrack that is configured just to be a modem.
 #define AT_COMBINED
 //define AT_MODEM
-//define AT_FLEX
 
 
-#define FIRMWARE_VERSION "3.1.3"
+#define FIRMWARE_VERSION "3.1.4"
 #define CONFIG_VERSION "PT0002"
 #define CONFIG_PROMPT "\n# "
 
@@ -64,10 +64,6 @@ Version history prior to 3.0 has been moved into the core readme.md file...
 
 #ifdef AT_COMBINED
   #include "BMP180.h"
-#endif
-
-#ifdef AT_FLEX
-  #include "SparkFunBME280.h"
 #endif
 
 #include <Wire.h>
@@ -156,13 +152,11 @@ float fMaxAlt;
 #ifdef AT_COMBINED
   BMP180 Pressure;      //BMP180 pressure/temp sensor
 #endif
-#ifdef AT_FLEX
-  BME280 Pressure;      //BMP280 pressure/temp sensor
-#endif
+
 TMP102 OAT;    //TMP102 sensor for outside air temp
 
 
-#if defined(AT_COMBINED) || defined(AT_FLEX)
+#if defined(AT_COMBINED)
 	//------------------------------------------ Variables for the internal modulation ------------------------------------------
 	//Pin assignments
 	#define PIN_AUDIO_OUT 3
@@ -242,7 +236,7 @@ void setup() {
 
   Serial.begin(19200);
 
-#if defined(AT_COMBINED) || defined(AT_FLEX)
+#if defined(AT_COMBINED)
 	//Define as internally moduled TNC
   oTNC.initInternal(PIN_PTT_OUT); 	//The PINS are defined in TNC.h.
 
@@ -273,22 +267,15 @@ void setup() {
 
   //init the I2C devices
 #ifdef AT_COMBINED
-  Serial.println(F("Init'ing BMP180 sensor"));
+  Serial.println(F("Init BMP180"));
   if (!Pressure.begin()) {
     Serial.println(F(" Could NOT init!"));
   }
 #endif
-#ifdef AT_FLEX
-  Serial.println(F("Init'ing BME280 sensor"));
-  Pressure.setI2CAddress(0x76);
-  if (Pressure.beginI2C() == false) //Begin communication over I2C
-  {
-    Serial.println(F(" Could NOT init!"));
-  }
-#endif  
+  
 
   
-  Serial.println(F("Init'ing TMP102 sensor"));
+  Serial.println(F("Init TMP102"));
   OAT.begin();
 
   //Check to see if we're going into config mode
@@ -519,14 +506,7 @@ void sendPositionSingleLine() {
     statusOAT = OAT.getTemperature(outsideTemp);
 
 #endif
-#ifdef AT_FLEX
-  airPressure = (double)Pressure.readFloatPressure();
-  airPressure = airPressure / 100;    //convert back to simple airpressure in hPa
-  insideTemp = (double)Pressure.readTempC();
-  //insideTemp = insideTemp / 100;    //convert back to decimal
 
-  statusOAT = OAT.getTemperature(outsideTemp);  
-#endif
 
   }
   oTNC.xmitStart(Config.Destination, Config.DestinationSSID, Config.Callsign, Config.CallsignSSID, Config.Path1, Config.Path1SSID, Config.Path2, Config.Path2SSID, (GPSParser.Altitude() < Config.DisablePathAboveAltitude));
@@ -888,11 +868,11 @@ void setDefaultConfig() {
   Config.CallsignSSID = '0';
   strcpy(Config.Destination, "APRS  ");
   Config.DestinationSSID = '0';
-  strcpy(Config.Path1, "      ");
-  Config.Path1SSID = '0';
+  strcpy(Config.Path1, "WIDE2 ");
+  Config.Path1SSID = '1';
   strcpy(Config.Path2, "      ");
   Config.Path2SSID = '0';
-  Config.DisablePathAboveAltitude = 0;
+  Config.DisablePathAboveAltitude = 2000;
   Config.Symbol = 'O';    //letter O for balloons
   Config.SymbolPage = '/';
   Config.BeaconType = 0;
@@ -1081,12 +1061,7 @@ void doConfigMode() {
           }
         }
 #endif
-#ifdef AT_FLEX
-        airPressure = (double)Pressure.readFloatPressure();
-        airPressure = airPressure / 100;    //convert back to simple airpressure in hPa
-        insideTemp = (double)Pressure.readTempC();
-        //insideTemp = insideTemp / 100;    //convert back to decimal
-#endif
+
         Serial.print(F("IAT: "));
         Serial.println(insideTemp);
         Serial.print(F("Pressure: "));
@@ -1425,7 +1400,7 @@ void sendConfigToPC() {
 
 
 
-#if defined(AT_COMBINED) || defined(AT_FLEX)
+#if defined(AT_COMBINED)
 	//------------------------------------------ Functions and Timers  for the internal modulation ------------------------------------------
 	ISR(TIMER1_COMPA_vect) {
 	  static boolean bBaudFlip = 0;

@@ -1,16 +1,14 @@
 /*
-TNC Data Collector for ArduinoTrack
-Copywrite 2011-2015 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+TNC Data Collector for Project: Traveler Flight Controllers
+Copywrite 2011-2019 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
-This file is part of ArduinoTrack.
-
-ArduinoTrack is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-ArduinoTrack is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with ArduinoTrack.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 */
 
@@ -32,7 +30,7 @@ You should have received a copy of the GNU General Public License along with Ard
 
 // 16MHz / 666 = 24.024kHz.  24kHz / 20 / 1201Hz baud
 #define TIMER1_SEED 666
-#define TX_DELAY_LEN 50
+
 
 #define MAX_SZXMIT_SIZE 200
 
@@ -51,6 +49,11 @@ class TNC {
     boolean noBitStuffing(void);
     int xmitLen(void);
     void xmitFlush(void);
+
+    void setTransmitterType(char transmitterType);
+    void setTxDelay(unsigned int txDelay);
+    void setCourtesyTone(char courtesyTone);
+    void keyTransmitter(bool transmit);
   private:
     void _calcCRC(byte iBit);
     boolean _getNextBit(void);
@@ -66,16 +69,19 @@ class TNC {
     int _pinRx;
     int _pinPTT;
 
+    char _transmitterType;
+    unsigned int _txDelay;
+    char _courtesyTone;
 
-byte _iSZPos = 0;    //Tracks the current byte being modulated out of the modem
-int _iTxDelayRemaining = 0;
-boolean _bNoStuffing = false;
-unsigned int _CRC;
-byte _iTxState = 0;
+
+    byte _iSZPos = 0;    //Tracks the current byte being modulated out of the modem
+    int _iTxDelayRemaining = 0;
+    boolean _bNoStuffing = false;
+    unsigned int _CRC;
+    byte _iTxState = 0;
 
   
 };
 
 
 #endif
-

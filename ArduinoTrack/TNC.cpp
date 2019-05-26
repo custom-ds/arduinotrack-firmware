@@ -1,19 +1,17 @@
 /*
-TNC Data Collector for ArduinoTrack
-Copywrite 2011-2015 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+TNC Data Collector for Project: Traveler Flight Controllers
+Copywrite 2011-2019 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
-This file is part of ArduinoTrack.
-
-ArduinoTrack is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-ArduinoTrack is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with ArduinoTrack.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Version History:
-Version 1.0.3 - December 24, 2018 - Fixed formatting issue in xmitLong.
+Version 1.1.0 - May 26, 2019 - Fixed potential buffer overflow issue.  Also included parameters to support DRA818V transmitter module.
 Version 1.0.2 - October 7, 2015 - Reduced the maximum transmit size from 250 to 200 bytes to conserve RAM.
 Version 1.0.1 - February 14, 2015 - Fixed issue with errant null being transmitted, audio was moved from A1 to D3, in order to correctly utilize native PWM.
 Version 1.0.0 - January 15, 2015 - Finalized the basic configuration and licensed GPS under the GPL3 license.
@@ -23,7 +21,11 @@ Version 1.0.0 - January 15, 2015 - Finalized the basic configuration and license
 #include "TNC.h"
 
 TNC::TNC(void) {
-  _iSZLen = -1;
+  //keep track of some transmitter parameters
+  _transmitterType = 0;
+  _txDelay = 50;    //Default txDelay
+  
+  _iSZLen = -1;   //init the buffer
   
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -110,12 +112,14 @@ void TNC::xmitEnd(void) {
     _iTxState = 0;
     _iSZPos = 0;
     
-    _iTxDelayRemaining = TX_DELAY_LEN;
+    _iTxDelayRemaining = _txDelay;    //start off with a txDelay parameter
   
     _CRC = 0xFFFF;    //init the CRC variable
     
     digitalWrite(_pinPTT, HIGH);    //push the PTT
-    
+    if (_transmitterType == 1) {
+      delay(250);			//FIX FOR DRA818V
+    }
     _startTimer1ISR();
   
     //wait for the state machine to get to a State 5, which is when it shuts down the transmitter.
@@ -149,7 +153,7 @@ void TNC::xmitString(char *sz) {
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 void TNC::xmitChar(char c) {
-  if (_iSZLen < (MAX_SZXMIT_SIZE - 1)) {
+  if (_iSZLen < (MAX_SZXMIT_SIZE - 2)) {
     //we still have room in the array
     _szXmit[++_iSZLen] = c;
     _szXmit[_iSZLen + 1] = '\0';    //null terminate
@@ -261,6 +265,7 @@ void TNC::_calcCRC(byte iBit) {
   }
   return;
 }
+
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 boolean TNC::getNextBit(void) {
   static int iRotatePos = 0;
@@ -397,4 +402,21 @@ void TNC::_startTimer1ISR(void){
 void TNC::_stopTimer1ISR(void) {
   cbi(TIMSK1, OCIE1A);
 }
-
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::setTransmitterType(char transmitterType) {
+  _transmitterType = transmitterType;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::setTxDelay(unsigned int txDelay) {
+  _txDelay = txDelay;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::setCourtesyTone(char courtesyTone) {
+  //NOT YET IMPLEMENTED!!!
+  _courtesyTone = courtesyTone;
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+void TNC::keyTransmitter(bool transmit) {
+  //Keys up or shuts down the transmitter.  Used for testing
+  digitalWrite(_pinPTT, transmit);    //Unkey the transmitter
+}

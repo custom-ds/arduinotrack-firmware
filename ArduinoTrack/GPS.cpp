@@ -1,19 +1,16 @@
 /*
-GPS Data Parser for ArduinoTrack
-Copywrite 2011-2015 - Zack Clobes (W0ZC), Custom Digital Services, LLC
+GPS Data Parser for Project: Traveler Flight Controllers
+Copywrite 2011-2019 - Zack Clobes (W0ZC), Custom Digital Services, LLC
 
-This file is part of ArduinoTrack.
-
-ArduinoTrack is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
+This program is free software: you can redistribute it and/or modify it under the terms of the GNU General Public License as published by
 the Free Software Foundation, either version 3 of the License, or (at your option) any later version.
 
-ArduinoTrack is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
+This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
 MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
-You should have received a copy of the GNU General Public License along with ArduinoTrack.  If not, see <http://www.gnu.org/licenses/>.
+You should have received a copy of the GNU General Public License along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
 Version History:
-Version 1.0.5 - December 24, 2018 - Fixed bug where south and east hemispheres were not reporting.
 Version 1.0.4 - October 18, 2015 - Found bug where GPS latitude and longitude were exceeding the buffer.  Corrected and cleaned up some old code.
 Version 1.0.3 - October 7, 2015 - Eliminated excess Serial.print's.  Cleaned up old comments.
 Version 1.0.2 - April 27, 2015 - Added the possibility to capture GNGGA and GNRMC strings (instead of just GP***).
